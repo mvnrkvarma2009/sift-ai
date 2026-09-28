@@ -7,7 +7,7 @@
     "dev:backend": "npm run dev --prefix backend",
     "build:frontend": "npm run build --prefix frontend",
     "build:backend": "npm run build --prefix backend",
-    "build": "npm run build:backend && npm run build:frontend",
+    "build:all": "npm run build:backend && npm run build:frontend",
     "seed": "npm run seed --prefix backend",
     "migrate": "npm run migrate --prefix backend"
   }

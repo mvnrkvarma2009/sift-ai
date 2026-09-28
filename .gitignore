@@ -7,9 +7,15 @@ node_modules/
 .env.*
 .env.local
 .env.*.local
+frontend/.env
+backend/.env
 **/.env
 **/.env.*
 !**/.env.example
+
+# Vercel
+.vercel/
+**/.vercel/
 
 # Production builds
 dist/
