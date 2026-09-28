@@ -358,6 +358,13 @@ async function apiRequest<T>(endpoint: string, options: any = {}): Promise<T> {
       return { saved: [], counts: { all: 0, tools: 0, models: 0, feed: 0 } } as unknown as T;
     }
 
+    if (url.includes('/api/notifications')) {
+      if (url.includes('/unread-count')) {
+        return { count: 0 } as unknown as T;
+      }
+      return { notifications: [], total: 0 } as unknown as T;
+    }
+
     throw err;
   }
 }

@@ -85,18 +85,20 @@
   --red: #DC2626;
   --success: #059669;
   --navbar-bg-scrolled: rgba(250, 250, 248, 0.72);
-  --laptop-lid-bg: linear-gradient(180deg, #23232D 0%, #1A1A22 100%);
-  --laptop-lid-border: rgba(255, 255, 255, 0.06);
-  --laptop-lid-highlight: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.10) 50%, transparent 100%);
+  --laptop-lid-bg: linear-gradient(180deg, #2A2A36 0%, #1A1A22 100%);
+  --laptop-lid-border: rgba(0, 0, 0, 0.4);
+  --laptop-lid-highlight: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.16), transparent);
   --laptop-bezel-bg: #0A0A0F;
-  --laptop-base-bg: linear-gradient(180deg, #1A1A22 0%, #101016 100%);
-  --laptop-base-border: rgba(255, 255, 255, 0.05);
-  --laptop-shadow: 0 40px 80px -24px rgba(0, 0, 0, 0.55), 0 16px 32px -16px rgba(0, 0, 0, 0.35);
-  --laptop-trackpad-bg: rgba(0, 0, 0, 0.5);
-  --laptop-edge-highlight: rgba(255, 255, 255, 0.04);
+  --laptop-bezel-text: rgba(255, 255, 255, 0.5);
+  --laptop-base-bg: linear-gradient(180deg, #24242E 0%, #14141A 100%);
+  --laptop-base-border: rgba(0, 0, 0, 0.3);
+  --laptop-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.35), 0 14px 28px -12px rgba(0, 0, 0, 0.22);
+  --laptop-ambient-shadow: radial-gradient(ellipse at 50% 0%, rgba(0, 0, 0, 0.32) 0%, rgba(0, 0, 0, 0.12) 48%, transparent 75%);
+  --laptop-trackpad-bg: #0E0E14;
+  --laptop-edge-highlight: rgba(255, 255, 255, 0.08);
   --laptop-notch-bg: #05050A;
-  --laptop-camera-dot-bg: #0A0A0F;
-  --laptop-camera-dot-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.10);
+  --laptop-camera-dot-bg: #05050A;
+  --laptop-camera-dot-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.15);
 }
 
 .dark {
@@ -117,31 +119,29 @@
   --red: #EF4444;
   --success: #10B981;
   --navbar-bg-scrolled: rgba(8, 8, 12, 0.72);
+  --laptop-lid-bg: linear-gradient(180deg, #2E2E38 0%, #1F1F28 100%);
+  --laptop-lid-border: rgba(255, 255, 255, 0.12);
+  --laptop-lid-highlight: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.18), transparent);
+  --laptop-bezel-bg: #0A0A0F;
+  --laptop-bezel-text: rgba(255, 255, 255, 0.5);
+  --laptop-base-bg: linear-gradient(180deg, #26262F 0%, #16161D 100%);
+  --laptop-base-border: rgba(255, 255, 255, 0.08);
+  --laptop-shadow: 0 40px 70px -24px rgba(0, 0, 0, 0.75), 0 14px 28px -14px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+  --laptop-ambient-shadow: radial-gradient(ellipse at 50% 0%, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.4) 50%, transparent 75%);
+  --laptop-trackpad-bg: #0E0E14;
+  --laptop-edge-highlight: rgba(255, 255, 255, 0.06);
+  --laptop-notch-bg: #05050A;
+  --laptop-camera-dot-bg: #05050A;
+  --laptop-camera-dot-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.12);
 }
 
 /* ProductShowcase Laptop Frame - Matches reference proportions */
 .laptop-mockup-wrapper {
-  width: min(840px, 62vw, calc((100vh - 240px) * 1.6));
+  width: min(980px, 76vw, calc((100vh - 210px) * 1.6));
   aspect-ratio: 16 / 10;
+  max-height: calc(100vh - 210px);
   margin-inline: auto;
-}
-
-@media (min-width: 1440px) {
-  .laptop-mockup-wrapper {
-    width: min(840px, 62vw, calc((100vh - 240px) * 1.6));
-  }
-}
-
-@media (min-width: 1024px) and (max-width: 1439px) {
-  .laptop-mockup-wrapper {
-    width: min(720px, 68vw, calc((100vh - 220px) * 1.6));
-  }
-}
-
-@media (min-width: 768px) and (max-width: 1023px) {
-  .laptop-mockup-wrapper {
-    width: min(580px, 80vw, calc((100vh - 200px) * 1.6));
-  }
+  flex-shrink: 0;
 }
 
 .navbar-transparent {

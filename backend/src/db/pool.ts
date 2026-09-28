@@ -8,7 +8,7 @@ import { SEED_FEED_DATA } from './seed/seedFeedData';
 // Primary PostgreSQL Pool
 export const pool = new Pool({
   connectionString: env.DATABASE_URL,
-  ssl: env.NODE_ENV === 'production' || env.DATABASE_URL.includes('supabase.co')
+  ssl: env.NODE_ENV === 'production' || env.DATABASE_URL.includes('supabase')
     ? { rejectUnauthorized: false }
     : undefined,
   max: 20,

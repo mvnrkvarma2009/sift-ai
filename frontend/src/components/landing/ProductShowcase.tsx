@@ -1,14 +1,16 @@
 import React, { useRef, useState, useEffect } from 'react';
 import {
   motion,
-  useScroll,
   useTransform,
   useReducedMotion,
+  useMotionValue,
+  useSpring,
   useMotionValueEvent,
   AnimatePresence,
 } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { useTheme } from 'next-themes';
+import { useLenis } from '../common/SmoothScroll';
 
 const easeSnap = [0.16, 1, 0.3, 1] as const;
 const stepSpring = { type: 'spring', stiffness: 200, damping: 22, mass: 0.6 } as const;
@@ -20,7 +22,60 @@ export function ProductShowcase() {
   const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
   const isMobile = windowWidth < 768;
   const isTablet = windowWidth >= 768 && windowWidth <= 1024;
-  const [activeSlideIndex, setActiveSlideIndex] = useState<1 | 2 | 3>(1);
+
+  // FIX 1 — Lenis Scroll Progress Sync
+  const lenis = useLenis();
+  const rawProgress = useMotionValue(0);
+
+  useEffect(() => {
+    const container = sectionRef.current;
+    if (!container) return;
+
+    const onScroll = () => {
+      const rect = container.getBoundingClientRect();
+      const vh = window.innerHeight;
+      const total = rect.height - vh;
+      const scrolled = Math.min(Math.max(-rect.top, 0), total);
+      const p = total > 0 ? scrolled / total : 0;
+      rawProgress.set(p);
+    };
+
+    onScroll();
+
+    if (lenis) {
+      lenis.on('scroll', onScroll);
+      return () => {
+        lenis.off('scroll', onScroll);
+      };
+    } else {
+      window.addEventListener('scroll', onScroll, { passive: true });
+      return () => {
+        window.removeEventListener('scroll', onScroll);
+      };
+    }
+  }, [lenis, rawProgress]);
+
+  // FIX 1 & FIX 5 — Spring Smoothing on Scroll Progress (bypassed if prefers-reduced-motion)
+  const springProgress = useSpring(rawProgress, {
+    stiffness: 120,
+    damping: 24,
+    mass: 0.4,
+    restDelta: 0.0005,
+  });
+
+  const smoothedProgress = shouldReduceMotion ? rawProgress : springProgress;
+
+  // FIX 1 — Stable MotionValues driven by smoothedProgress
+  const slide1Opacity = useTransform(smoothedProgress, [0, 0.28, 0.36], [1, 1, 0], { clamp: true });
+  const slide2Opacity = useTransform(smoothedProgress, [0.32, 0.40, 0.60, 0.68], [0, 1, 1, 0], { clamp: true });
+  const slide3Opacity = useTransform(smoothedProgress, [0.64, 0.72, 1], [0, 1, 1], { clamp: true });
+
+  // FIX 2 — Track activeIndex (0 | 1 | 2) without re-rendering on every scroll frame
+  const [activeIndex, setActiveIndex] = useState<0 | 1 | 2>(0);
+  useMotionValueEvent(smoothedProgress, 'change', (p) => {
+    const next = p < 0.36 ? 0 : p < 0.68 ? 1 : 2;
+    if (next !== activeIndex) setActiveIndex(next);
+  });
 
   // Theme detection
   const { theme, resolvedTheme } = useTheme();
@@ -38,43 +93,27 @@ export function ProductShowcase() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Scroll Progress
-  const { scrollYProgress } = useScroll({
-    target: sectionRef,
-    offset: ['start start', 'end end'],
-  });
-
-  const rawLaptopY = useTransform(scrollYProgress, [0, 0.15, 0.85, 1], [12, 0, 0, 0], { clamp: true });
-  const laptopY = shouldReduceMotion ? 0 : rawLaptopY;
-
-  // PHASE 3 — SLIDE CROSS-FADE
-  const slide1Opacity = useTransform(scrollYProgress, [0, 0.28, 0.36], [1, 1, 0], { clamp: true });
-  const slide2Opacity = useTransform(scrollYProgress, [0.32, 0.40, 0.60, 0.68], [0, 1, 1, 0], { clamp: true });
-  const slide3Opacity = useTransform(scrollYProgress, [0.64, 0.72, 1], [0, 1, 1], { clamp: true });
-
-  const slide1Visibility = useTransform(slide1Opacity, (o) => (o > 0.01 ? 'visible' : 'hidden'));
-  const slide2Visibility = useTransform(slide2Opacity, (o) => (o > 0.01 ? 'visible' : 'hidden'));
-  const slide3Visibility = useTransform(slide3Opacity, (o) => (o > 0.01 ? 'visible' : 'hidden'));
-
-  // Track active slide index
-  useMotionValueEvent(scrollYProgress, 'change', (latest) => {
-    if (latest < 0.35) setActiveSlideIndex(1);
-    else if (latest < 0.67) setActiveSlideIndex(2);
-    else setActiveSlideIndex(3);
-  });
-
   // Navigation helper for step indicator clicks
-  const scrollToSlide = (index: 1 | 2 | 3) => {
+  const scrollToSlide = (index: 0 | 1 | 2) => {
+    setActiveIndex(index);
     if (!sectionRef.current) return;
     const rect = sectionRef.current.getBoundingClientRect();
     const scrollTop = window.scrollY + rect.top;
     const sectionHeight = sectionRef.current.offsetHeight;
-    if (index === 1) {
-      window.scrollTo({ top: scrollTop + 60, behavior: 'smooth' });
-    } else if (index === 2) {
-      window.scrollTo({ top: scrollTop + sectionHeight * 0.48, behavior: 'smooth' });
+    const scrollableDistance = Math.max(0, sectionHeight - window.innerHeight);
+    let targetTop = scrollTop;
+    if (index === 0) {
+      targetTop = scrollTop + 40;
+    } else if (index === 1) {
+      targetTop = scrollTop + scrollableDistance * 0.50;
     } else {
-      window.scrollTo({ top: scrollTop + sectionHeight * 0.82, behavior: 'smooth' });
+      targetTop = scrollTop + scrollableDistance * 0.85;
+    }
+
+    if (lenis) {
+      lenis.scrollTo(targetTop, { duration: 1.2 });
+    } else {
+      window.scrollTo({ top: targetTop, behavior: 'smooth' });
     }
   };
 
@@ -132,9 +171,35 @@ export function ProductShowcase() {
     },
   ];
 
+  // FIX 2 — Row Stagger Variants (hidden / show with 0.06 stagger)
+  const staggerRowContainer = {
+    hidden: {},
+    show: {
+      transition: {
+        staggerChildren: shouldReduceMotion ? 0 : 0.06,
+      },
+    },
+  };
+
+  const staggerRowItem = {
+    hidden: {
+      opacity: 0,
+      y: shouldReduceMotion ? 0 : 8,
+    },
+    show: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: shouldReduceMotion ? 0.1 : 0.4,
+        ease: [0.22, 1, 0.36, 1],
+      },
+    },
+  };
+
   // RENDER SLIDE 1 (Tight stacking, hairlines, 1:1 pixel rendering)
   const renderSlide1 = (isMobileCard?: boolean) => {
     const displayedItems = isMobileCard ? newsItems.slice(0, 3) : newsItems.slice(0, 4);
+    const isActive = activeIndex === 0;
 
     return (
       <div
@@ -142,7 +207,7 @@ export function ProductShowcase() {
           display: 'flex',
           flexDirection: 'column',
           height: '100%',
-          padding: isMobileCard ? '0px' : '16px 20px',
+          padding: isMobileCard ? '0px' : '28px 40px',
           boxSizing: 'border-box',
           overflow: 'hidden',
         }}
@@ -152,7 +217,7 @@ export function ProductShowcase() {
         <div className="flex flex-col shrink-0">
           <motion.div
             initial={shouldReduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: -6 }}
-            animate={activeSlideIndex === 1 ? { opacity: 1, y: 0 } : { opacity: 0, y: -6 }}
+            animate={isActive ? { opacity: 1, y: 0 } : { opacity: 0, y: -6 }}
             transition={{ duration: 0.25, delay: 0, ease: easeSnap }}
             className="flex justify-between items-center text-[10px] sm:text-[11px] font-mono uppercase tracking-wider font-semibold leading-[1.3] text-[var(--text-muted)]"
           >
@@ -162,7 +227,7 @@ export function ProductShowcase() {
 
           <motion.h2
             initial={shouldReduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 8 }}
-            animate={activeSlideIndex === 1 ? { opacity: 1, y: 0 } : { opacity: 0, y: 8 }}
+            animate={isActive ? { opacity: 1, y: 0 } : { opacity: 0, y: 8 }}
             transition={{ duration: 0.30, delay: 0.06, ease: easeSnap }}
             className="font-sans text-[20px] sm:text-[22px] font-semibold text-[var(--text-primary)] mt-1 leading-[1.2]"
           >
@@ -171,7 +236,7 @@ export function ProductShowcase() {
 
           <motion.p
             initial={shouldReduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 6 }}
-            animate={activeSlideIndex === 1 ? { opacity: 1, y: 0 } : { opacity: 0, y: 6 }}
+            animate={isActive ? { opacity: 1, y: 0 } : { opacity: 0, y: 6 }}
             transition={{ duration: 0.25, delay: 0.12, ease: easeSnap }}
             className="text-[12px] sm:text-[13px] italic text-[var(--text-muted)] mt-0.5 font-sans leading-[1.4]"
           >
@@ -179,8 +244,11 @@ export function ProductShowcase() {
           </motion.p>
         </div>
 
-        {/* ZONE B — 4 News Rows */}
-        <div
+        {/* ZONE B — 4 News Rows with FIX 2 Stagger */}
+        <motion.div
+          variants={staggerRowContainer}
+          initial="hidden"
+          animate={isActive ? 'show' : 'hidden'}
           style={{
             flex: '1 1 auto',
             display: 'flex',
@@ -196,13 +264,7 @@ export function ProductShowcase() {
           {displayedItems.map((item, idx) => (
             <motion.div
               key={idx}
-              initial={shouldReduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 6 }}
-              animate={activeSlideIndex === 1 ? { opacity: 1, y: 0 } : { opacity: 0, y: 6 }}
-              transition={{
-                duration: shouldReduceMotion ? 0.1 : 0.3,
-                delay: shouldReduceMotion ? 0 : 0.12 + idx * 0.04,
-                ease: easeSnap,
-              }}
+              variants={staggerRowItem}
               style={{
                 flex: '0 0 auto',
                 minHeight: 0,
@@ -222,12 +284,12 @@ export function ProductShowcase() {
               </span>
             </motion.div>
           ))}
-        </div>
+        </motion.div>
 
         {/* ZONE C — Footer */}
         <motion.div
           initial={shouldReduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 6 }}
-          animate={activeSlideIndex === 1 ? { opacity: 1, y: 0 } : { opacity: 0, y: 6 }}
+          animate={isActive ? { opacity: 1, y: 0 } : { opacity: 0, y: 6 }}
           transition={{ duration: 0.25, delay: 0.36, ease: easeSnap }}
           className="flex justify-between items-center text-[11px] sm:text-[12px] font-sans font-medium text-[var(--text-muted)] shrink-0 leading-[1.4] pt-1"
         >
@@ -240,13 +302,15 @@ export function ProductShowcase() {
 
   // RENDER SLIDE 2 (Verdict List with Pill Tag)
   const renderSlide2 = (isMobileCard?: boolean) => {
+    const isActive = activeIndex === 1;
+
     return (
       <div
         style={{
           display: 'flex',
           flexDirection: 'column',
           height: '100%',
-          padding: isMobileCard ? '0px' : '16px 20px',
+          padding: isMobileCard ? '0px' : '28px 40px',
           boxSizing: 'border-box',
           overflow: 'hidden',
         }}
@@ -256,7 +320,7 @@ export function ProductShowcase() {
         <div className="flex flex-col shrink-0">
           <motion.div
             initial={shouldReduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: -6 }}
-            animate={activeSlideIndex === 2 ? { opacity: 1, y: 0 } : { opacity: 0, y: -6 }}
+            animate={isActive ? { opacity: 1, y: 0 } : { opacity: 0, y: -6 }}
             transition={{ duration: 0.25, delay: 0, ease: easeSnap }}
             className="flex justify-between items-center text-[10px] sm:text-[11px] font-mono text-[var(--text-muted)] uppercase tracking-wider font-semibold leading-[1.3]"
           >
@@ -266,7 +330,7 @@ export function ProductShowcase() {
 
           <motion.h2
             initial={shouldReduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 8 }}
-            animate={activeSlideIndex === 2 ? { opacity: 1, y: 0 } : { opacity: 0, y: 8 }}
+            animate={isActive ? { opacity: 1, y: 0 } : { opacity: 0, y: 8 }}
             transition={{ duration: 0.30, delay: 0.06, ease: easeSnap }}
             className="font-sans text-[20px] sm:text-[22px] font-semibold text-[var(--text-primary)] mt-1 leading-[1.2]"
           >
@@ -276,7 +340,7 @@ export function ProductShowcase() {
           {/* Extracted constraints pills */}
           <motion.div
             initial={shouldReduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 6 }}
-            animate={activeSlideIndex === 2 ? { opacity: 1, y: 0 } : { opacity: 0, y: 6 }}
+            animate={isActive ? { opacity: 1, y: 0 } : { opacity: 0, y: 6 }}
             transition={{ duration: 0.25, delay: 0.12, ease: easeSnap }}
             className="flex items-center gap-1.5 mt-2 flex-wrap"
           >
@@ -292,8 +356,11 @@ export function ProductShowcase() {
           </motion.div>
         </div>
 
-        {/* ZONE B — 2 Verdict Cards */}
-        <div
+        {/* ZONE B — 2 Verdict Cards with FIX 2 Stagger */}
+        <motion.div
+          variants={staggerRowContainer}
+          initial="hidden"
+          animate={isActive ? 'show' : 'hidden'}
           style={{
             flex: '1 1 auto',
             display: 'flex',
@@ -305,16 +372,10 @@ export function ProductShowcase() {
             margin: '8px 0',
           }}
         >
-          {verdictRows.map((tool, idx) => (
+          {verdictRows.map((tool) => (
             <motion.div
               key={tool.name}
-              initial={shouldReduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 8 }}
-              animate={activeSlideIndex === 2 ? { opacity: 1, y: 0 } : { opacity: 0, y: 8 }}
-              transition={{
-                duration: shouldReduceMotion ? 0.1 : 0.35,
-                delay: shouldReduceMotion ? 0 : 0.15 + idx * 0.06,
-                ease: easeSnap,
-              }}
+              variants={staggerRowItem}
               style={{
                 flex: '0 0 auto',
                 minHeight: 0,
@@ -345,12 +406,12 @@ export function ProductShowcase() {
               </div>
             </motion.div>
           ))}
-        </div>
+        </motion.div>
 
         {/* ZONE C — Footer */}
         <motion.div
           initial={shouldReduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 6 }}
-          animate={activeSlideIndex === 2 ? { opacity: 1, y: 0 } : { opacity: 0, y: 6 }}
+          animate={isActive ? { opacity: 1, y: 0 } : { opacity: 0, y: 6 }}
           transition={{ duration: 0.30, delay: 0.60, ease: easeSnap }}
           className="pt-2 border-t border-[var(--border)] flex items-center justify-between text-[11px] sm:text-[12px] shrink-0 leading-[1.4]"
         >
@@ -368,28 +429,9 @@ export function ProductShowcase() {
     );
   };
 
-  // RENDER SLIDE 3 (Audit Trail with Replayable Deterministic Timeline)
+  // RENDER SLIDE 3 (Audit Trail with Replayable Proof)
   const renderSlide3 = (isMobileCard?: boolean) => {
-    const auditEvents = [
-      {
-        time: '10:32:04',
-        dotColor: 'bg-[#6366F1]',
-        title: 'Requirements extracted',
-        description: 'Gemini parsed 3 constraints from your query.',
-      },
-      {
-        time: '10:32:05',
-        dotColor: 'bg-[#6366F1]',
-        title: 'Rules executed',
-        description: '5 deterministic rules ran against 50 tools.',
-      },
-      {
-        time: '10:32:05',
-        dotColor: 'bg-[#14B8A6]',
-        title: 'Verdict attested',
-        description: 'Result signed and stored. Replayable on demand.',
-      },
-    ];
+    const isActive = activeIndex === 2;
 
     return (
       <div
@@ -397,101 +439,115 @@ export function ProductShowcase() {
           display: 'flex',
           flexDirection: 'column',
           height: '100%',
-          padding: isMobileCard ? '0px' : '16px 20px',
+          padding: isMobileCard ? '0px' : '28px 40px',
           boxSizing: 'border-box',
           overflow: 'hidden',
+          justifyContent: 'space-between',
         }}
         className="w-full select-none"
       >
-        {/* ZONE A (top) */}
+        {/* Header Bar */}
         <div className="flex flex-col shrink-0">
-          <motion.div
-            initial={shouldReduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: -6 }}
-            animate={activeSlideIndex === 3 ? { opacity: 1, y: 0 } : { opacity: 0, y: -6 }}
-            transition={{ duration: 0.25, ease: easeSnap, delay: 0 }}
-            className="flex justify-between items-center text-[10px] sm:text-[11px] font-mono uppercase tracking-wider leading-[1.3] pb-1 border-b border-[var(--border)]"
-          >
-            <span className="text-[var(--text-muted)] font-semibold">AUDIT TRAIL</span>
-            <span className="text-[#6366F1] font-semibold">REPLAYABLE</span>
-          </motion.div>
+          <div className="flex justify-between items-center text-[10px] sm:text-[11px] font-mono leading-[1.3]">
+            <span className="text-[var(--text-muted)] tracking-wider font-semibold uppercase">
+              AUDIT TRAIL · CURSOR
+            </span>
+            <span className="text-[#059669] dark:text-[#10B981] font-semibold flex items-center gap-1.5 text-[10px] sm:text-[11px] font-mono">
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#059669] dark:bg-[#10B981]" />
+              SHA-256 SIGNED
+            </span>
+          </div>
 
-          <motion.h2
-            initial={shouldReduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 8 }}
-            animate={activeSlideIndex === 3 ? { opacity: 1, y: 0 } : { opacity: 0, y: 8 }}
-            transition={{ duration: 0.30, ease: easeSnap, delay: 0.06 }}
-            className="text-[18px] sm:text-[20px] font-sans font-semibold text-[var(--text-primary)] mt-1.5 leading-[1.2] tracking-tight"
-          >
-            Every verdict, on the record.
-          </motion.h2>
+          <h2 className="font-sans text-[18px] font-semibold text-[var(--text-primary)] mt-1.5 leading-[1.2]">
+            Every Sift answer comes with proof.
+          </h2>
+          <p className="text-[12px] italic text-[var(--text-muted)] mt-0.5 font-sans leading-[1.4]">
+            See exactly how we reached this verdict.
+          </p>
         </div>
 
-        {/* ZONE B (vertical timeline, 3 events) */}
-        <div
+        {/* 3 Numbered Steps with FIX 2 Stagger */}
+        <motion.div
+          variants={staggerRowContainer}
+          initial="hidden"
+          animate={isActive ? 'show' : 'hidden'}
           style={{
             flex: '1 1 auto',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'center',
-            gap: '8px',
+            gap: '12px',
             minHeight: 0,
             overflow: 'hidden',
             margin: '8px 0',
           }}
         >
-          {auditEvents.map((evt, idx) => {
-            const isLast = idx === auditEvents.length - 1;
-            return (
-              <motion.div
-                key={idx}
-                initial={shouldReduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 8 }}
-                animate={activeSlideIndex === 3 ? { opacity: 1, y: 0 } : { opacity: 0, y: 8 }}
-                transition={{
-                  duration: shouldReduceMotion ? 0.1 : 0.35,
-                  ease: easeSnap,
-                  delay: shouldReduceMotion ? 0 : 0.15 + idx * 0.08,
-                }}
-                style={{ flex: '0 0 auto', minHeight: 0 }}
-                className="flex items-start gap-2.5 relative"
-              >
-                {/* Left: timestamp mono 11px muted */}
-                <span className="font-mono text-[10px] sm:text-[11px] text-[var(--text-muted)] w-[52px] sm:w-[58px] shrink-0 pt-0.5">
-                  {evt.time}
-                </span>
+          {/* Step 01 */}
+          <motion.div variants={staggerRowItem} className="flex flex-col gap-0.5">
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-[11px] sm:text-[12px] font-bold text-[var(--accent)]">
+                01
+              </span>
+              <span className="font-sans text-[13px] font-semibold text-[var(--text-primary)]">
+                You asked
+              </span>
+            </div>
+            <p className="text-[12px] text-[var(--text-secondary)] font-sans italic pl-6">
+              "I need a free coding assistant for TypeScript"
+            </p>
+          </motion.div>
 
-                {/* Dot & vertical connector */}
-                <div className="relative flex flex-col items-center shrink-0 self-stretch">
-                  <div className={`w-2 h-2 rounded-full shrink-0 mt-1.5 ${evt.dotColor}`} />
-                  {!isLast && <div className="w-[1px] bg-[var(--border)] flex-1 my-0.5" />}
-                </div>
+          {/* Step 02 */}
+          <motion.div variants={staggerRowItem} className="flex flex-col gap-1.5">
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-[11px] sm:text-[12px] font-bold text-[var(--accent)]">
+                02
+              </span>
+              <span className="font-sans text-[13px] font-semibold text-[var(--text-primary)]">
+                We extracted 3 requirements
+              </span>
+            </div>
+            <div className="flex items-center gap-2 pl-6 flex-wrap">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] sm:text-[11px] font-mono border border-[var(--border)] bg-[var(--surface-elevated)] text-[var(--text-secondary)] font-medium">
+                Coding
+              </span>
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] sm:text-[11px] font-mono border border-[var(--border)] bg-[var(--surface-elevated)] text-[var(--text-secondary)] font-medium">
+                Free
+              </span>
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] sm:text-[11px] font-mono border border-[var(--border)] bg-[var(--surface-elevated)] text-[var(--text-secondary)] font-medium">
+                TypeScript
+              </span>
+            </div>
+          </motion.div>
 
-                {/* Middle: title 14px Inter 600 primary + description 12px Inter secondary */}
-                <div className="flex flex-col min-w-0 pb-1">
-                  <span className="text-[13px] sm:text-[14px] font-sans font-semibold text-[var(--text-primary)] leading-[1.3]">
-                    {evt.title}
-                  </span>
-                  <span className="text-[11px] sm:text-[12px] font-sans text-[var(--text-secondary)] leading-[1.4] mt-0.5">
-                    {evt.description}
-                  </span>
-                </div>
-              </motion.div>
-            );
-          })}
-        </div>
-
-        {/* ZONE C (bottom) */}
-        <motion.div
-          initial={shouldReduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 6 }}
-          animate={activeSlideIndex === 3 ? { opacity: 1, y: 0 } : { opacity: 0, y: 6 }}
-          transition={{ duration: 0.30, delay: 0.42, ease: easeSnap }}
-          className="border-t border-[var(--border)] pt-2 flex items-center justify-between shrink-0 leading-[1.4]"
-        >
-          <span className="text-[11px] sm:text-[12px] italic text-[var(--text-muted)] font-sans">
-            Every step is logged.
-          </span>
-          <span className="text-[11px] sm:text-[12px] font-sans font-medium text-[#6366F1] hover:underline cursor-pointer">
-            Export audit →
-          </span>
+          {/* Step 03 */}
+          <motion.div variants={staggerRowItem} className="flex flex-col gap-0.5">
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-[11px] sm:text-[12px] font-bold text-[var(--accent)]">
+                03
+              </span>
+              <span className="font-sans text-[13px] font-semibold text-[var(--text-primary)]">
+                Rules verified 47 tools
+              </span>
+            </div>
+            <p className="text-[12px] text-[var(--text-secondary)] font-sans pl-6">
+              Cursor passed all checks. 46 others filtered out.
+            </p>
+          </motion.div>
         </motion.div>
+
+        {/* Footer */}
+        <div className="flex justify-between items-center text-[11px] pt-2 border-t border-[var(--border)] shrink-0">
+          <span className="font-sans text-[var(--text-muted)]">
+            Built by{' '}
+            <span className="text-[var(--accent)] font-medium cursor-pointer hover:underline">
+              Nagendra Varma
+            </span>
+          </span>
+          <span className="font-mono text-[var(--text-muted)]">
+            Made in 2026
+          </span>
+        </div>
       </div>
     );
   };
@@ -506,22 +562,23 @@ export function ProductShowcase() {
         ref={stickyRef}
         style={{
           position: 'sticky',
-          top: 0,
-          height: '100vh',
+          top: '72px',
+          height: 'calc(100vh - 72px)',
+          maxHeight: 'calc(100vh - 72px)',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
           overflow: 'hidden',
-          padding: '8px 0',
+          padding: '10px 0',
         }}
       >
         {/* Mobile (<768px): Full-width card with hairline border */}
         <div className="w-full max-w-[480px] mx-auto px-2 relative z-10 block md:hidden">
           <div className="w-full border border-[var(--border)] rounded-[14px] p-5 shadow-xl bg-[var(--surface)] relative overflow-hidden flex flex-col justify-between min-h-[460px]">
-            {activeSlideIndex === 1 && renderSlide1(true)}
-            {activeSlideIndex === 2 && renderSlide2(true)}
-            {activeSlideIndex === 3 && renderSlide3(true)}
+            {activeIndex === 0 && renderSlide1(true)}
+            {activeIndex === 1 && renderSlide2(true)}
+            {activeIndex === 2 && renderSlide3(true)}
           </div>
         </div>
 
@@ -536,12 +593,12 @@ export function ProductShowcase() {
           }}
           className="hidden md:flex flex-col items-center justify-center w-full"
         >
-          {/* FRONT-FACING DARK LAPTOP FRAME */}
+          {/* FRONT-FACING LAPTOP FRAME — Motion A Entrance */}
           <motion.div
             initial={
               shouldReduceMotion
                 ? { opacity: 0 }
-                : { opacity: 0, y: 32, scale: 0.965, filter: 'blur(6px)' }
+                : { opacity: 0, y: 32, scale: 0.97, filter: 'blur(6px)' }
             }
             whileInView={
               shouldReduceMotion
@@ -552,42 +609,43 @@ export function ProductShowcase() {
             transition={
               shouldReduceMotion
                 ? { duration: 0.2 }
-                : { duration: 0.9, ease: easeSnap }
+                : { duration: 0.9, ease: [0.16, 1, 0.3, 1] }
             }
             style={{
-              width: 'min(900px, 70vw, calc((100vh - 190px) * 1.55))',
-              maxHeight: 'calc(100vh - 180px)',
+              width: 'min(980px, 76vw, calc((100vh - 210px) * 1.6))',
               aspectRatio: '16 / 10',
+              maxHeight: 'calc(100vh - 210px)',
               marginInline: 'auto',
-              marginBottom: '14px',
+              marginBottom: '6px',
               flexShrink: 0,
             }}
             className="laptop-mockup-wrapper relative flex flex-col items-center justify-center overflow-visible shrink-0 select-none"
           >
-            {/* PHASE 2: PINNED SCROLL DRIFT */}
+            {/* INNER LID / LAPTOP WRAPPER — Motion B Subtle Idle Float */}
             <motion.div
-              style={{
-                y: laptopY,
-                width: '100%',
-              }}
+              animate={shouldReduceMotion ? undefined : { y: [0, -2, 0] }}
+              transition={
+                shouldReduceMotion
+                  ? undefined
+                  : { duration: 6, repeat: Infinity, ease: 'easeInOut' }
+              }
               className="relative flex flex-col items-center w-full"
             >
-              {/* LAYER 1 — LID (silhouette wrapper, dark in BOTH themes) */}
+              {/* LAYER 1 — LID */}
               <div
                 style={{
                   width: '100%',
                   marginInline: 'auto',
                   padding: '3px',
                   borderRadius: '12px 12px 6px 6px',
-                  background: 'linear-gradient(180deg, #23232D 0%, #1A1A22 100%)',
-                  border: '1px solid rgba(255, 255, 255, 0.06)',
-                  boxShadow:
-                    '0 40px 80px -24px rgba(0, 0, 0, 0.55), 0 16px 32px -16px rgba(0, 0, 0, 0.35)',
+                  background: 'var(--laptop-lid-bg)',
+                  border: '1px solid var(--laptop-lid-border)',
+                  boxShadow: 'var(--laptop-shadow)',
                   position: 'relative',
                 }}
                 className="relative w-full"
               >
-                {/* Top highlight (::before) */}
+                {/* Top highlight */}
                 <div
                   style={{
                     position: 'absolute',
@@ -595,39 +653,50 @@ export function ProductShowcase() {
                     left: '12%',
                     right: '12%',
                     height: '1px',
-                    background:
-                      'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.10) 50%, transparent)',
+                    background: 'var(--laptop-lid-highlight)',
                     pointerEvents: 'none',
                     zIndex: 10,
                   }}
                 />
 
-                {/* LAYER 2 — BEZEL (dark in BOTH themes) */}
+                {/* LAYER 2 — BEZEL */}
                 <div
                   style={{
                     padding: '5px 5px 12px 5px',
-                    background: '#0A0A0F',
+                    background: 'var(--laptop-bezel-bg)',
                     borderRadius: '10px 10px 4px 4px',
                     position: 'relative',
                   }}
                   className="relative w-full"
                 >
-                  {/* CAMERA: single 3px dot centered in top bezel (no notch bar) */}
+                  {/* CAMERA NOTCH HOUSING */}
                   <div
                     style={{
                       position: 'absolute',
-                      top: '3px',
+                      top: 0,
                       left: '50%',
                       transform: 'translateX(-50%)',
-                      width: '3px',
-                      height: '3px',
-                      borderRadius: '9999px',
-                      background: '#05050A',
-                      boxShadow: 'inset 0 0 0 0.5px rgba(255,255,255,0.12)',
+                      width: '38px',
+                      height: '5px',
+                      background: 'var(--laptop-notch-bg)',
+                      borderRadius: '0 0 4px 4px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
                       pointerEvents: 'none',
                       zIndex: 30,
                     }}
-                  />
+                  >
+                    <div
+                      style={{
+                        width: '3px',
+                        height: '3px',
+                        borderRadius: '9999px',
+                        background: 'var(--laptop-camera-dot-bg)',
+                        boxShadow: 'var(--laptop-camera-dot-shadow)',
+                      }}
+                    />
+                  </div>
 
                   {/* LAYER 3 — SCREEN (existing slide container) */}
                   <div
@@ -660,10 +729,10 @@ export function ProductShowcase() {
 
                     {/* Screen Content Container with brightness blink on slide activation */}
                     <motion.div
-                      key={`screen-blink-${activeSlideIndex}`}
+                      key={`screen-blink-${activeIndex}`}
                       initial={{ filter: shouldReduceMotion ? 'brightness(1)' : 'brightness(0.92)' }}
                       animate={{ filter: 'brightness(1)' }}
-                      transition={{ duration: shouldReduceMotion ? 0.1 : 0.2 }}
+                      transition={{ duration: shouldReduceMotion ? 0.01 : 0.2 }}
                       className="absolute inset-0 w-full h-full text-[0.9em]"
                       style={{ fontSize: '0.9em' }}
                     >
@@ -671,32 +740,20 @@ export function ProductShowcase() {
                       <motion.div
                         style={{
                           opacity: slide1Opacity,
-                          visibility: slide1Visibility,
-                          pointerEvents: activeSlideIndex === 1 ? 'auto' : 'none',
+                          willChange: 'opacity',
+                          pointerEvents: activeIndex === 0 ? 'auto' : 'none',
                         }}
                         className="absolute inset-0 h-full w-full overflow-hidden bg-[var(--background)] text-[var(--text-primary)] select-none"
                       >
-                        <motion.div
-                          initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, y: 8 }}
-                          whileInView={{ opacity: 1, y: 0 }}
-                          viewport={{ once: true, amount: 0.2 }}
-                          transition={{
-                            duration: shouldReduceMotion ? 0.2 : 0.5,
-                            delay: shouldReduceMotion ? 0 : 0.24,
-                            ease: easeSnap,
-                          }}
-                          className="w-full h-full"
-                        >
-                          {renderSlide1()}
-                        </motion.div>
+                        {renderSlide1()}
                       </motion.div>
 
                       {/* SLIDE 2 — THE ANSWER */}
                       <motion.div
                         style={{
                           opacity: slide2Opacity,
-                          visibility: slide2Visibility,
-                          pointerEvents: activeSlideIndex === 2 ? 'auto' : 'none',
+                          willChange: 'opacity',
+                          pointerEvents: activeIndex === 1 ? 'auto' : 'none',
                         }}
                         className="absolute inset-0 h-full w-full overflow-hidden bg-[var(--background)] text-[var(--text-primary)] select-none"
                       >
@@ -707,8 +764,8 @@ export function ProductShowcase() {
                       <motion.div
                         style={{
                           opacity: slide3Opacity,
-                          visibility: slide3Visibility,
-                          pointerEvents: activeSlideIndex === 3 ? 'auto' : 'none',
+                          willChange: 'opacity',
+                          pointerEvents: activeIndex === 2 ? 'auto' : 'none',
                         }}
                         className="absolute inset-0 h-full w-full overflow-hidden bg-[var(--background)] text-[var(--text-primary)] select-none"
                       >
@@ -719,58 +776,65 @@ export function ProductShowcase() {
                 </div>
               </div>
 
-              {/* LAYER 4 — BASE (keyboard deck edge, dark in BOTH themes) */}
-              <motion.div
-                initial={shouldReduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 8 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.2 }}
-                transition={{
-                  duration: shouldReduceMotion ? 0.2 : 0.4,
-                  delay: shouldReduceMotion ? 0 : 0.40,
-                  ease: 'easeOut',
-                }}
+              {/* LAYER 4 — BASE (keyboard deck edge) */}
+              <div
                 style={{
-                  width: '94%',
+                  width: '98%',
                   height: '10px',
-                  marginTop: '1px',
                   marginInline: 'auto',
                   display: 'block',
                   borderRadius: '0 0 12px 12px',
-                  background: 'linear-gradient(180deg, #1A1A22 0%, #101016 100%)',
-                  border: '1px solid rgba(255, 255, 255, 0.05)',
+                  background: 'var(--laptop-base-bg)',
+                  border: '1px solid var(--laptop-base-border)',
+                  borderTop: 'none',
                   position: 'relative',
                   overflow: 'hidden',
                 }}
                 className="relative mx-auto block"
               >
-                {/* Edge highlight: 1px line at top 1px, left 8%, right 8% */}
+                {/* Edge highlight */}
                 <div
                   style={{
                     position: 'absolute',
-                    top: '1px',
-                    left: '8%',
-                    right: '8%',
+                    top: 0,
+                    left: '6%',
+                    right: '6%',
                     height: '1px',
-                    background: 'rgba(255, 255, 255, 0.04)',
+                    background: 'var(--laptop-edge-highlight)',
                     pointerEvents: 'none',
                   }}
                 />
 
-                {/* Trackpad hint: top 3px, left 50%, translateX(-50%), width 22%, height 4px, border-radius 2px */}
+                {/* Center thumb scoop */}
                 <div
                   style={{
                     position: 'absolute',
-                    top: '3px',
+                    top: 0,
                     left: '50%',
                     transform: 'translateX(-50%)',
-                    width: '22%',
+                    width: '56px',
                     height: '4px',
-                    borderRadius: '2px',
-                    background: isDark ? 'rgba(0, 0, 0, 0.45)' : 'rgba(0, 0, 0, 0.08)',
+                    borderRadius: '0 0 4px 4px',
+                    background: 'var(--laptop-trackpad-bg)',
+                    boxShadow: 'inset 0 1px 1px rgba(0, 0, 0, 0.4)',
                     pointerEvents: 'none',
                   }}
                 />
-              </motion.div>
+              </div>
+
+              {/* Ambient Grounding Shadow Blur */}
+              <div
+                style={{
+                  width: '96%',
+                  height: '38px',
+                  marginInline: 'auto',
+                  marginTop: '-4px',
+                  background: 'var(--laptop-ambient-shadow)',
+                  filter: 'blur(14px)',
+                  pointerEvents: 'none',
+                  zIndex: -1,
+                }}
+              />
             </motion.div>
           </motion.div>
 
@@ -781,12 +845,12 @@ export function ProductShowcase() {
           >
             {/* ROW 2: Headline Slot with letter spacing animation on slide change */}
             <div
-              style={{ marginBottom: '10px', flexShrink: 0 }}
-              className="h-[36px] flex items-center justify-center relative w-full overflow-hidden shrink-0"
+              style={{ marginBottom: '6px', flexShrink: 0 }}
+              className="h-[30px] flex items-center justify-center relative w-full overflow-hidden shrink-0"
             >
             <AnimatePresence mode="wait">
               <motion.p
-                key={activeSlideIndex}
+                key={activeIndex}
                 initial={
                   shouldReduceMotion
                     ? { opacity: 0 }
@@ -815,9 +879,9 @@ export function ProductShowcase() {
                 }
                 className="text-center text-[var(--text-primary)] text-[19px] sm:text-[23px] font-serif italic"
               >
-                {activeSlideIndex === 1 && 'Read the signal. Skip the noise.'}
-                {activeSlideIndex === 2 && 'Every recommendation has a reason.'}
-                {activeSlideIndex === 3 && 'Every decision has a paper trail.'}
+                {activeIndex === 0 && 'Read the signal. Skip the noise.'}
+                {activeIndex === 1 && 'Every recommendation has a reason.'}
+                {activeIndex === 2 && 'Every answer comes with proof.'}
               </motion.p>
             </AnimatePresence>
           </div>
@@ -825,17 +889,17 @@ export function ProductShowcase() {
             {/* ROW 3: Step Indicator with spring physics */}
             <div
               style={{ flexShrink: 0 }}
-              className="h-[32px] flex flex-col items-center justify-center shrink-0"
+              className="h-[28px] flex flex-col items-center justify-center shrink-0"
             >
               <div className="flex items-center gap-2">
-                {([1, 2, 3] as const).map((idx) => {
-                  const active = activeSlideIndex === idx;
+                {([0, 1, 2] as const).map((idx) => {
+                  const active = activeIndex === idx;
                   return (
                     <button
                       key={idx}
                       type="button"
                       onClick={() => scrollToSlide(idx)}
-                      aria-label={`Slide ${idx}`}
+                      aria-label={`Slide ${idx + 1}`}
                       style={{
                         width: active ? 32 : 24,
                         transition: shouldReduceMotion
@@ -862,9 +926,9 @@ export function ProductShowcase() {
               </div>
               <div className="flex items-center gap-3 mt-1 font-mono text-[11px] uppercase tracking-widest">
                 {([
-                  { idx: 1, label: 'READ' },
-                  { idx: 2, label: 'VERIFY' },
-                  { idx: 3, label: 'ALERT' },
+                  { idx: 0, label: 'READ' },
+                  { idx: 1, label: 'VERIFY' },
+                  { idx: 2, label: 'AUDIT' },
                 ] as const).map(({ idx, label }, i) => (
                   <React.Fragment key={idx}>
                     {i > 0 && <span className="text-[var(--text-muted)] opacity-40">·</span>}
@@ -875,8 +939,8 @@ export function ProductShowcase() {
                         transition: 'color 200ms ease-out, opacity 200ms ease-out',
                       }}
                       className={`cursor-pointer border-0 bg-transparent p-0 ${
-                        activeSlideIndex === idx
-                          ? 'text-[var(--text-primary)] font-semibold opacity-100'
+                        activeIndex === idx
+                          ? 'text-[var(--accent)] font-semibold opacity-100'
                           : 'text-[var(--text-muted)] opacity-50 hover:opacity-80'
                       }`}
                     >

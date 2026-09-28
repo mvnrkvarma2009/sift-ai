@@ -14,7 +14,7 @@ import auditRoutes from './routes/auditRoutes';
 import dashboardRoutes from './routes/dashboardRoutes';
 import adminRoutes from './routes/adminRoutes';
 import modelsRoutes from './routes/modelsRoutes';
-import notificationsRoutes from './routes/notificationsRoutes';
+import notificationsRoutes from './routes/notifications';
 import savedRoutes from './routes/savedRoutes';
 
 import { scheduleDailyUpdate } from './jobs/dailyUpdate';
@@ -42,18 +42,11 @@ app.use(
 // CORS configuration: explicit allow-list + local development
 app.use(
   cors({
-    origin: (origin, callback) => {
-      if (!origin) return callback(null, true);
-      if (
-        origin.startsWith('http://localhost:') ||
-        origin.startsWith('http://127.0.0.1:') ||
-        origin.includes('vercel.app') ||
-        origin === env.FRONTEND_URL
-      ) {
-        return callback(null, true);
-      }
-      callback(null, true);
-    },
+    origin: [
+      'https://sift-ai-taupe.vercel.app',
+      'http://localhost:3000',
+      'http://localhost:5173',
+    ],
     credentials: true,
     methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
