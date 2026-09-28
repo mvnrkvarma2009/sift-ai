@@ -1,0 +1,6 @@
+{
+  "name": "Sift Intelligence",
+  "description": "Deterministic intelligence verification platform for high-signal technical research.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
