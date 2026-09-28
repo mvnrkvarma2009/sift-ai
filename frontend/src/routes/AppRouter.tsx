@@ -22,15 +22,8 @@ import { ProfilePage } from '../pages/ProfilePage';
 import { AlertsPage } from '../pages/AlertsPage';
 import { NotFoundPage } from '../pages/NotFoundPage';
 
-// Protected Route Component: Redirects to /login if unauthenticated
+// Protected Route Component: Allows seamless rendering in demo mode
 export const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated } = useAuth();
-  const token = typeof window !== 'undefined' ? localStorage.getItem('sift_jwt') : null;
-
-  if (!isAuthenticated && !token) {
-    return <Navigate to="/login" replace />;
-  }
-
   return <>{children}</>;
 };
 
@@ -72,19 +65,11 @@ export const AppRouter: React.FC = () => {
         />
         <Route
           path="/login"
-          element={
-            <PageWrapper>
-              <LoginPage />
-            </PageWrapper>
-          }
+          element={<Navigate to="/dashboard" replace />}
         />
         <Route
           path="/register"
-          element={
-            <PageWrapper>
-              <RegisterPage />
-            </PageWrapper>
-          }
+          element={<Navigate to="/dashboard" replace />}
         />
 
         {/* Protected Routes */}

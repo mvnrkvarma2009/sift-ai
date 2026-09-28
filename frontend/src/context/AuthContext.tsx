@@ -66,6 +66,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
+  // Demo auto-login: if no session exists, log in demo user against real backend
+  useEffect(() => {
+    const currentToken = localStorage.getItem('token') || localStorage.getItem('sift_jwt');
+    if (!currentToken) {
+      authApi.login('demo@sift.ai', 'demo1234')
+        .then((res) => {
+          if (res && res.token) {
+            localStorage.setItem('token', res.token);
+            localStorage.setItem('sift_jwt', res.token);
+            localStorage.setItem('user', JSON.stringify(res.user));
+            localStorage.setItem('sift_user', JSON.stringify(res.user));
+            setToken(res.token);
+            setUser(res.user);
+          }
+        })
+        .catch((err) => {
+          console.warn('[DEMO MODE] Auto-login error:', err.message);
+        });
+    }
+  }, []);
+
   const login = async (email: string, password?: string): Promise<boolean> => {
     try {
       const res = await authApi.login(email, password || 'Password123!');
