@@ -111,6 +111,17 @@ export const LoginPage: React.FC = () => {
               <span>{loading ? 'Authenticating...' : 'Sign in'}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setEmail('demo@sift.ai');
+                setPassword('demo1234');
+              }}
+              className="w-full mt-2 py-2 text-[12px] font-mono text-accent-indigo hover:underline flex items-center justify-center gap-1.5 transition-colors"
+            >
+              <span>⚡ Use demo credentials (demo@sift.ai / demo1234)</span>
+            </button>
           </form>
 
           <div className="mt-8 pt-6 border-t border-border-hairline text-center text-[13px] text-text-muted">

@@ -26,7 +26,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
 
   const [user, setUser] = useState<User | null>(() => {
-    const savedUser = localStorage.getItem('sift_user');
+    const savedUser = localStorage.getItem('sift_user') || localStorage.getItem('user');
     if (savedUser) {
       try {
         return JSON.parse(savedUser);
@@ -34,23 +34,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return null;
       }
     }
-    // Default authenticated builder user if token exists
-    if (localStorage.getItem('sift_jwt')) {
-      const storedId = localStorage.getItem('sift_uid') || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : '00000000-0000-0000-0000-000000000001');
-      return {
-        id: storedId,
-        name: 'Builder',
-        email: 'builder@sift.dev',
-      };
-    }
     return null;
   });
 
   useEffect(() => {
     const handleStorageChange = () => {
-      const currentToken = localStorage.getItem('sift_jwt');
+      const currentToken = localStorage.getItem('sift_jwt') || localStorage.getItem('token');
       setToken(currentToken);
-      const savedUser = localStorage.getItem('sift_user');
+      const savedUser = localStorage.getItem('sift_user') || localStorage.getItem('user');
       if (savedUser) {
         try {
           setUser(JSON.parse(savedUser));
@@ -66,27 +57,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
-  // Demo auto-login: if no session exists, log in demo user against real backend
-  useEffect(() => {
-    const currentToken = localStorage.getItem('token') || localStorage.getItem('sift_jwt');
-    if (!currentToken) {
-      authApi.login('demo@sift.ai', 'demo1234')
-        .then((res) => {
-          if (res && res.token) {
-            localStorage.setItem('token', res.token);
-            localStorage.setItem('sift_jwt', res.token);
-            localStorage.setItem('user', JSON.stringify(res.user));
-            localStorage.setItem('sift_user', JSON.stringify(res.user));
-            setToken(res.token);
-            setUser(res.user);
-          }
-        })
-        .catch((err) => {
-          console.warn('[DEMO MODE] Auto-login error:', err.message);
-        });
-    }
-  }, []);
-
   const login = async (email: string, password?: string): Promise<boolean> => {
     try {
       const res = await authApi.login(email, password || 'Password123!');
@@ -99,10 +69,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(res.user);
         return true;
       }
-      return false;
+      throw new Error('Authentication failed: No token returned');
     } catch (err: any) {
-      console.warn('[AUTH] Login error:', err.message);
-      return false;
+      const msg = err.response?.data?.error || err.response?.data?.message || err.message || 'Login failed';
+      console.warn('[AUTH] Login error:', msg);
+      throw new Error(msg);
     }
   };
 
@@ -118,10 +89,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(res.user);
         return true;
       }
-      return false;
+      throw new Error('Registration failed: No token returned');
     } catch (err: any) {
-      console.warn('[AUTH] Register error:', err.message);
-      return false;
+      const msg = err.response?.data?.error || err.response?.data?.message || err.message || 'Registration failed';
+      console.warn('[AUTH] Register error:', msg);
+      throw new Error(msg);
     }
   };
 
@@ -130,6 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('sift_jwt');
     localStorage.removeItem('user');
     localStorage.removeItem('sift_user');
+    localStorage.removeItem('sift_uid');
     setToken(null);
     setUser(null);
   };

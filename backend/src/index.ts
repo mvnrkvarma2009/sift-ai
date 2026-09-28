@@ -39,37 +39,20 @@ app.use(
   })
 );
 
-// CORS configuration: restrict to FRONTEND_URL, CLIENT_URL, and Vercel domains
-const allowedOrigins = [
-  env.FRONTEND_URL,
-  process.env.CLIENT_URL,
-  'https://sift-ai-taupe.vercel.app',
-  'http://localhost:3000',
-  'http://localhost:5173',
-  'http://127.0.0.1:3000',
-  'http://127.0.0.1:5173',
-].filter(Boolean) as string[];
-
+// CORS configuration: explicit allow-list
 app.use(
   cors({
-    origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps, curl, or server-to-server)
-      if (!origin) return callback(null, true);
-      const cleanOrigin = origin.replace(/\/$/, '');
-      if (
-        allowedOrigins.includes(cleanOrigin) ||
-        allowedOrigins.includes('*') ||
-        cleanOrigin.endsWith('.vercel.app')
-      ) {
-        return callback(null, true);
-      }
-      callback(new Error(`CORS blocked for origin: ${origin}`));
-    },
+    origin: [
+      'https://sift-ai-taupe.vercel.app',
+      'http://localhost:3000',
+      'http://localhost:5173',
+    ],
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   })
 );
+app.options('*', cors());
 
 // Body parsers
 app.use(express.json({ limit: '1mb' }));
