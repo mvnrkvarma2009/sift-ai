@@ -48,7 +48,15 @@ export const memoryStore = {
       name: 'Verified Builder',
       created_at: new Date(),
       updated_at: new Date(),
-    }
+    },
+    {
+      id: '00000000-0000-0000-0000-000000000002',
+      email: 'demo@sift.ai',
+      password_hash: '$2a$10$wTzhPpch51gDNA/jnE20gOqs8gVUKcPihrW8bAWjI3wMkphP3sx3K',
+      name: 'Demo User',
+      created_at: new Date(),
+      updated_at: new Date(),
+    },
   ] as any[],
   feed_items: [...SEED_FEED_DATA] as any[],
   tools: TOOLS_DATA.map((t, idx) => ({
