@@ -8,23 +8,26 @@ export async function getModels(req: Request, res: Response): Promise<void> {
     let sql = 'SELECT * FROM models WHERE 1=1';
     const params: any[] = [];
 
-    if (type && type !== 'all') {
-      params.push(type);
-      if (type === 'closed_source' || type === 'open_source') {
-        sql += ` AND source_type = $${params.length}`;
-      } else {
-        sql += ` AND type = $${params.length}`;
-      }
-    }
+    const effectiveSourceType = (type && (type === 'closed_source' || type === 'open_source'))
+      ? type
+      : (source_type && source_type !== 'all' ? source_type : undefined);
 
-    if (source_type && source_type !== 'all') {
-      params.push(source_type);
-      sql += ` AND source_type = $${params.length}`;
+    if (effectiveSourceType) {
+      params.push(effectiveSourceType);
+      sql += ` AND (source_type = $${params.length} OR type = $${params.length})`;
+    } else if (type && type !== 'all') {
+      params.push(type);
+      sql += ` AND (type = $${params.length} OR category ILIKE $${params.length})`;
     }
 
     if (category && category !== 'all') {
-      params.push(category);
-      sql += ` AND (category ILIKE $${params.length} OR modality ILIKE $${params.length})`;
+      const catLower = String(category).toLowerCase();
+      if (catLower === 'code' || catLower === 'coding') {
+        sql += ` AND (category ILIKE '%code%' OR category ILIKE '%coding%' OR modality ILIKE '%code%')`;
+      } else {
+        params.push(`%${category}%`);
+        sql += ` AND (category ILIKE $${params.length} OR modality ILIKE $${params.length})`;
+      }
     }
 
     if (pricing && pricing !== 'all') {
@@ -33,13 +36,13 @@ export async function getModels(req: Request, res: Response): Promise<void> {
     }
 
     if (provider && provider !== 'all') {
-      params.push(provider);
+      params.push(`%${provider}%`);
       sql += ` AND provider ILIKE $${params.length}`;
     }
 
     if (search && typeof search === 'string') {
       params.push(`%${search.trim()}%`);
-      sql += ` AND (name ILIKE $${params.length} OR provider ILIKE $${params.length} OR context_window ILIKE $${params.length})`;
+      sql += ` AND (name ILIKE $${params.length} OR provider ILIKE $${params.length} OR context_window ILIKE $${params.length} OR model_family ILIKE $${params.length})`;
     }
 
     if (sort === 'newest' || sort === 'release') {
@@ -68,33 +71,38 @@ export async function getModels(req: Request, res: Response): Promise<void> {
     // Count query
     let countSql = 'SELECT COUNT(*) as count FROM models WHERE 1=1';
     const countParams: any[] = [];
-    if (type && type !== 'all') {
+
+    if (effectiveSourceType) {
+      countParams.push(effectiveSourceType);
+      countSql += ` AND (source_type = $${countParams.length} OR type = $${countParams.length})`;
+    } else if (type && type !== 'all') {
       countParams.push(type);
-      if (type === 'closed_source' || type === 'open_source') {
-        countSql += ` AND source_type = $${countParams.length}`;
+      countSql += ` AND (type = $${countParams.length} OR category ILIKE $${countParams.length})`;
+    }
+
+    if (category && category !== 'all') {
+      const catLower = String(category).toLowerCase();
+      if (catLower === 'code' || catLower === 'coding') {
+        countSql += ` AND (category ILIKE '%code%' OR category ILIKE '%coding%' OR modality ILIKE '%code%')`;
       } else {
-        countSql += ` AND type = $${countParams.length}`;
+        countParams.push(`%${category}%`);
+        countSql += ` AND (category ILIKE $${countParams.length} OR modality ILIKE $${countParams.length})`;
       }
     }
-    if (source_type && source_type !== 'all') {
-      countParams.push(source_type);
-      countSql += ` AND source_type = $${countParams.length}`;
-    }
-    if (category && category !== 'all') {
-      countParams.push(category);
-      countSql += ` AND (category ILIKE $${countParams.length} OR modality ILIKE $${countParams.length})`;
-    }
+
     if (pricing && pricing !== 'all') {
       countParams.push(pricing);
       countSql += ` AND pricing = $${countParams.length}`;
     }
+
     if (provider && provider !== 'all') {
-      countParams.push(provider);
+      countParams.push(`%${provider}%`);
       countSql += ` AND provider ILIKE $${countParams.length}`;
     }
+
     if (search && typeof search === 'string') {
       countParams.push(`%${search.trim()}%`);
-      countSql += ` AND (name ILIKE $${countParams.length} OR provider ILIKE $${countParams.length} OR context_window ILIKE $${countParams.length})`;
+      countSql += ` AND (name ILIKE $${countParams.length} OR provider ILIKE $${countParams.length} OR context_window ILIKE $${countParams.length} OR model_family ILIKE $${countParams.length})`;
     }
 
     const countResult = await query(countSql, countParams);

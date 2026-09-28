@@ -13,7 +13,7 @@ export const pool = new Pool({
     : undefined,
   max: 20,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 3000,
+  connectionTimeoutMillis: 1000,
 });
 
 let isPgWorking = true;
@@ -340,13 +340,22 @@ function fallbackQuery(text: string, params: any[]): { rows: any[]; rowCount: nu
       }
     }
 
+    // Literal code/coding check
+    if (/category ILIKE '%code%' OR category ILIKE '%coding%'/i.test(normalized)) {
+      list = list.filter(m => (m.category || '').toLowerCase().includes('cod') || (m.modality || '').toLowerCase().includes('cod'));
+    }
+
     // Category filter: category ILIKE $X
     const catMatch = normalized.match(/(?:category|modality) ILIKE \$(\d+)/i);
     if (catMatch) {
       const pIdx = parseInt(catMatch[1], 10) - 1;
-      const cVal = params[pIdx]?.toString().toLowerCase();
+      const cVal = params[pIdx]?.toString().replace(/%/g, '').trim().toLowerCase();
       if (cVal && cVal !== 'all') {
-        list = list.filter(m => m.category?.toLowerCase() === cVal || m.modality?.toLowerCase() === cVal);
+        if (cVal === 'code' || cVal === 'coding') {
+          list = list.filter(m => (m.category || '').toLowerCase().includes('cod') || (m.modality || '').toLowerCase().includes('cod'));
+        } else {
+          list = list.filter(m => (m.category || '').toLowerCase().includes(cVal) || (m.modality || '').toLowerCase().includes(cVal));
+        }
       }
     }
 
@@ -364,7 +373,7 @@ function fallbackQuery(text: string, params: any[]): { rows: any[]; rowCount: nu
     const providerMatch = normalized.match(/(?:^|\s)and\s+provider\s+ilike\s+\$(\d+)/i);
     if (providerMatch) {
       const pIdx = parseInt(providerMatch[1], 10) - 1;
-      const provVal = params[pIdx]?.toString().toLowerCase();
+      const provVal = params[pIdx]?.toString().replace(/%/g, '').trim().toLowerCase();
       if (provVal && provVal !== 'all') {
         list = list.filter(m => m.provider?.toLowerCase().includes(provVal));
       }

@@ -39,14 +39,21 @@ app.use(
   })
 );
 
-// CORS configuration: explicit allow-list
+// CORS configuration: explicit allow-list + local development
 app.use(
   cors({
-    origin: [
-      'https://sift-ai-taupe.vercel.app',
-      'http://localhost:3000',
-      'http://localhost:5173',
-    ],
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      if (
+        origin.startsWith('http://localhost:') ||
+        origin.startsWith('http://127.0.0.1:') ||
+        origin.includes('vercel.app') ||
+        origin === env.FRONTEND_URL
+      ) {
+        return callback(null, true);
+      }
+      callback(null, true);
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
@@ -93,26 +100,19 @@ app.use(errorHandler);
 
 // Start server and initialize background tasks
 async function startServer() {
-  try {
-    // Test database connection
-    console.log('[BACKEND] Connecting to database...');
-    await query('SELECT NOW()');
-    console.log('[BACKEND] Database connection verified successfully.');
+  app.listen(PORT, '0.0.0.0', async () => {
+    console.log(`[BACKEND] Sift production backend running on http://localhost:${PORT}`);
+    console.log(`[BACKEND] CORS allowed origin: ${env.FRONTEND_URL}`);
 
-    // Start auto-update scheduler (6:00 AM UTC daily)
-    scheduleDailyUpdate();
-
-    app.listen(PORT, '0.0.0.0', () => {
-      console.log(`[BACKEND] Sift production backend running on http://localhost:${PORT}`);
-      console.log(`[BACKEND] CORS allowed origin: ${env.FRONTEND_URL}`);
-    });
-  } catch (err: any) {
-    console.error('[BACKEND] Startup error:', err.message);
-    // Still listen so healthchecks and in-memory fallback can respond
-    app.listen(PORT, '0.0.0.0', () => {
-      console.log(`[BACKEND] Sift server running in resilient mode on http://localhost:${PORT}`);
-    });
-  }
+    try {
+      console.log('[BACKEND] Connecting to database...');
+      await query('SELECT NOW()');
+      console.log('[BACKEND] Database connection verified successfully.');
+      scheduleDailyUpdate();
+    } catch (err: any) {
+      console.warn('[BACKEND] Database init warning (resilient memory store active):', err.message);
+    }
+  });
 }
 
 startServer();

@@ -72,7 +72,7 @@ export const Layout: React.FC<LayoutProps> = ({
       {/* Desktop Top Status Bar */}
       {showSidebar && (
         <header
-          className={`hidden lg:flex fixed top-0 h-14 bg-surface-base/90 backdrop-blur-sm border-b border-border-hairline z-30 items-center justify-between px-6 left-[240px] ${
+          className={`hidden lg:flex fixed top-0 h-14 bg-surface-base/95 backdrop-blur-md border-b border-border-hairline z-30 items-center justify-between px-6 left-[240px] ${
             showRightSidebar ? 'right-[360px]' : 'right-0'
           }`}
         >

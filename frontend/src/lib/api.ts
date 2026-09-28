@@ -102,93 +102,9 @@ export const INITIAL_FEED_ITEMS: FeedItem[] = [
   },
 ];
 
-export const INITIAL_TOOLS: ToolResult[] = [
-  {
-    id: 'gamma',
-    name: 'Gamma',
-    category: 'Presentations · Deck & Doc Builder',
-    trending_percent: 94,
-    pricing: 'free_tier',
-    verdict: 'MEETS REQUIREMENTS',
-    description:
-      'AI presentation tool with prompt-to-deck generation, real-time vector layout styling, and native PowerPoint export.',
-    rules: [
-      { id: 'r1', name: 'category match', status: 'PASS', detail: 'Presentation generation tool category verified' },
-      { id: 'r2', name: 'budget check', status: 'PASS', detail: 'Includes 400 free AI compute credits on registration' },
-      { id: 'r3', name: 'signup check', status: 'PASS', detail: 'Standard email signup supported' },
-      { id: 'r4', name: 'export format check', status: 'PASS', detail: 'Full vector PowerPoint (.pptx) export supported' },
-      { id: 'r5', name: 'slide count check', status: 'PASS', detail: 'Slide generation within free tier quota' },
-    ],
-  },
-  {
-    id: 'claude',
-    name: 'Claude 3.5 Sonnet',
-    category: 'Writing & Reasoning · Anthropic',
-    trending_percent: 93,
-    pricing: 'free_tier',
-    verdict: 'MEETS REQUIREMENTS',
-    description:
-      'Leading frontier reasoning model renowned for nuanced, human-sounding long-form writing and code synthesis.',
-    rules: [
-      { id: 'r1', name: 'category match', status: 'PASS', detail: 'Writing and reasoning model category verified' },
-      { id: 'r2', name: 'budget check', status: 'PASS', detail: 'Free tier available on web platform with daily quotas' },
-      { id: 'r3', name: 'signup check', status: 'PASS', detail: 'Free account login verified' },
-      { id: 'r4', name: 'export format check', status: 'PASS', detail: 'Markdown, text, and code export supported' },
-      { id: 'r5', name: 'slide count check', status: 'PASS', detail: 'No restrictive slide limit applicable' },
-    ],
-  },
-  {
-    id: 'descript',
-    name: 'Descript',
-    category: 'Audio & Video · Transcription',
-    trending_percent: 88,
-    pricing: 'free_tier',
-    verdict: 'MEETS REQUIREMENTS',
-    description:
-      'Text-based audio and video editor with automated high-accuracy transcription and studio sound enhancement.',
-    rules: [
-      { id: 'r1', name: 'category match', status: 'PASS', detail: 'Audio transcription and editing tool category verified' },
-      { id: 'r2', name: 'budget check', status: 'PASS', detail: '1 free transcription hour per month without credit card' },
-      { id: 'r3', name: 'signup check', status: 'PASS', detail: 'Account registration required' },
-      { id: 'r4', name: 'export format check', status: 'PASS', detail: 'SRT, VTT, TXT, and DOCX formats natively available' },
-      { id: 'r5', name: 'slide count check', status: 'PASS', detail: 'Transcription pipeline compatible' },
-    ],
-  },
-  {
-    id: 'cursor',
-    name: 'Cursor',
-    category: 'Coding · AI Code Editor',
-    trending_percent: 95,
-    pricing: 'free_tier',
-    verdict: 'MEETS REQUIREMENTS',
-    description:
-      'Fork of VS Code with deep agentic model integration, multi-file codebase edits, and native TypeScript syntax intelligence.',
-    rules: [
-      { id: 'r1', name: 'category match', status: 'PASS', detail: 'AI code editor and coding assistant category verified' },
-      { id: 'r2', name: 'budget check', status: 'PASS', detail: 'Free Hobby tier with 2,000 monthly completions' },
-      { id: 'r3', name: 'signup check', status: 'PASS', detail: 'Account authentication verified' },
-      { id: 'r4', name: 'export format check', status: 'PASS', detail: 'Codebase files and diffs export verified' },
-      { id: 'r5', name: 'slide count check', status: 'PASS', detail: 'Developer workspace compatible' },
-    ],
-  },
-  {
-    id: 'beautiful-ai',
-    name: 'Beautiful.ai',
-    category: 'Presentations · Smart Slides',
-    trending_percent: 45,
-    pricing: 'paid',
-    verdict: 'DOES NOT MEET',
-    description:
-      'Template-driven presentation platform featuring smart automatic slide alignment and corporate branding controls.',
-    rules: [
-      { id: 'r1', name: 'category match', status: 'PASS', detail: 'Presentation platform category verified' },
-      { id: 'r2', name: 'budget check', status: 'FAIL', detail: 'Paid-only tool; requires credit card for trial' },
-      { id: 'r3', name: 'signup check', status: 'FAIL', detail: 'Requires billing details before canvas access' },
-      { id: 'r4', name: 'export format check', status: 'PASS', detail: 'PPTX export available on paid tier' },
-      { id: 'r5', name: 'slide count check', status: 'PASS', detail: 'Slide generation compatible' },
-    ],
-  },
-];
+import { FALLBACK_MODELS, FALLBACK_TOOLS } from '../data/fallbackCatalog';
+
+export const INITIAL_TOOLS: ToolResult[] = FALLBACK_TOOLS;
 
 export const INITIAL_AUDIT_DATA: AuditData = {
   tool: 'Cursor',
@@ -266,28 +182,182 @@ async function apiRequest<T>(endpoint: string, options: any = {}): Promise<T> {
     });
     return response.data;
   } catch (err: any) {
-    // If backend is unavailable or returns Network Error / 404, fallback to rich built-in data fixtures
+    console.warn(`[API] Remote call to ${url} unavailable, using resilient fallback catalog:`, err?.message || err);
+
+    // Feed fallback
     if (url.includes('/api/feed')) {
       return { items: INITIAL_FEED_ITEMS, total: INITIAL_FEED_ITEMS.length } as unknown as T;
     }
+
+    // Models trending
+    if (url.includes('/api/models/trending')) {
+      const trending = [...FALLBACK_MODELS].sort((a, b) => (b.trending_percent || 0) - (a.trending_percent || 0)).slice(0, 10);
+      return { trending, models: trending } as unknown as T;
+    }
+
+    // Models top
+    if (url.includes('/api/models/top')) {
+      const top = FALLBACK_MODELS.slice(0, 4);
+      return { models: top } as unknown as T;
+    }
+
+    // Models stats
+    if (url.includes('/api/models/stats')) {
+      const total = FALLBACK_MODELS.length;
+      const closed = FALLBACK_MODELS.filter((m) => m.source_type === 'closed_source' || m.type === 'closed_source').length;
+      const open = FALLBACK_MODELS.filter((m) => m.source_type === 'open_source' || m.type === 'open_source').length;
+      return {
+        total,
+        breakdown: {},
+        types: { closed_source: closed, open_source: open },
+        pricing: { free_tier: 14, paid_only: 6, free_local: open, paid_hosting: 0 },
+      } as unknown as T;
+    }
+
+    // Model by ID: /api/models/:id
+    const modelIdMatch = url.match(/\/api\/models\/([^?]+)/);
+    if (modelIdMatch && !['trending', 'top', 'stats'].includes(modelIdMatch[1])) {
+      const targetId = decodeURIComponent(modelIdMatch[1]).toLowerCase();
+      const found = FALLBACK_MODELS.find(
+        (m) =>
+          m.id.toLowerCase() === targetId ||
+          m.name.toLowerCase() === targetId ||
+          m.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') === targetId
+      );
+      if (found) {
+        return { model: found } as unknown as T;
+      }
+    }
+
+    // Models catalog list: /api/models?...
+    if (url.includes('/api/models')) {
+      const urlObj = new URL(url, 'http://localhost');
+      const typeFilter = urlObj.searchParams.get('type') || urlObj.searchParams.get('source_type');
+      const catFilter = urlObj.searchParams.get('category');
+      const searchFilter = urlObj.searchParams.get('search')?.toLowerCase().trim();
+      const sort = urlObj.searchParams.get('sort') || 'trending';
+      const limit = parseInt(urlObj.searchParams.get('limit') || '150', 10);
+      const offset = parseInt(urlObj.searchParams.get('offset') || '0', 10);
+
+      let list = [...FALLBACK_MODELS];
+
+      if (typeFilter && typeFilter !== 'all') {
+        if (typeFilter === 'closed_source') {
+          list = list.filter((m) => m.source_type === 'closed_source' || m.type === 'closed_source');
+        } else if (typeFilter === 'open_source') {
+          list = list.filter((m) => m.source_type === 'open_source' || m.type === 'open_source');
+        }
+      }
+
+      if (catFilter && catFilter !== 'all') {
+        const cLower = catFilter.toLowerCase();
+        list = list.filter((m) => {
+          const mCat = (m.category || '').toLowerCase();
+          const mMod = (m.modality || '').toLowerCase();
+          if (cLower === 'code' || cLower === 'coding') {
+            return mCat.includes('cod') || mMod.includes('cod');
+          }
+          return mCat.includes(cLower) || mMod.includes(cLower);
+        });
+      }
+
+      if (searchFilter) {
+        list = list.filter(
+          (m) =>
+            m.name.toLowerCase().includes(searchFilter) ||
+            m.provider.toLowerCase().includes(searchFilter) ||
+            (m.model_family || '').toLowerCase().includes(searchFilter) ||
+            (m.context_window || '').toLowerCase().includes(searchFilter) ||
+            (m.best_for || []).some((b) => b.toLowerCase().includes(searchFilter))
+        );
+      }
+
+      if (sort === 'release' || sort === 'newest') {
+        list.sort((a, b) => new Date(b.release_date || 0).getTime() - new Date(a.release_date || 0).getTime());
+      } else if (sort === 'name') {
+        list.sort((a, b) => a.name.localeCompare(b.name));
+      } else {
+        list.sort((a, b) => (b.trending_percent || 0) - (a.trending_percent || 0));
+      }
+
+      const total = list.length;
+      const paginated = list.slice(offset, offset + limit);
+      return { models: paginated, total, limit, offset } as unknown as T;
+    }
+
+    // Tools trending
     if (url.includes('/api/tools/trending')) {
-      return { trending: INITIAL_TOOLS.slice(0, 8) } as unknown as T;
+      const trending = [...FALLBACK_TOOLS].sort((a, b) => (b.trending_percent || 0) - (a.trending_percent || 0)).slice(0, 8);
+      return { trending } as unknown as T;
     }
+
+    // Tools stats
     if (url.includes('/api/tools/stats')) {
-      return { total: INITIAL_TOOLS.length, breakdown: {}, pricing: {} } as unknown as T;
+      return { total: FALLBACK_TOOLS.length, breakdown: {}, pricing: {} } as unknown as T;
     }
+
+    // Tool by ID: /api/tools/:id
+    const toolIdMatch = url.match(/\/api\/tools\/([^?]+)/);
+    if (toolIdMatch && !['trending', 'stats'].includes(toolIdMatch[1])) {
+      const targetId = decodeURIComponent(toolIdMatch[1]).toLowerCase();
+      const found = FALLBACK_TOOLS.find(
+        (t) =>
+          t.id.toLowerCase() === targetId ||
+          t.name.toLowerCase() === targetId ||
+          t.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') === targetId
+      );
+      if (found) {
+        return { tool: found } as unknown as T;
+      }
+    }
+
+    // Tools list: /api/tools?...
     if (url.includes('/api/tools')) {
-      return { tools: INITIAL_TOOLS, total: INITIAL_TOOLS.length } as unknown as T;
+      const urlObj = new URL(url, 'http://localhost');
+      const cat = urlObj.searchParams.get('category');
+      const search = urlObj.searchParams.get('search')?.toLowerCase().trim();
+      const sort = urlObj.searchParams.get('sort') || 'trending';
+      const limit = parseInt(urlObj.searchParams.get('limit') || '24', 10);
+      const offset = parseInt(urlObj.searchParams.get('offset') || '0', 10);
+
+      let list = [...FALLBACK_TOOLS];
+
+      if (cat && cat !== 'All' && cat !== 'all') {
+        list = list.filter((t) => t.category.toLowerCase() === cat.toLowerCase());
+      }
+
+      if (search) {
+        list = list.filter(
+          (t) =>
+            t.name.toLowerCase().includes(search) ||
+            t.category.toLowerCase().includes(search) ||
+            t.description.toLowerCase().includes(search)
+        );
+      }
+
+      if (sort === 'name') {
+        list.sort((a, b) => a.name.localeCompare(b.name));
+      } else {
+        list.sort((a, b) => (b.trending_percent || 0) - (a.trending_percent || 0));
+      }
+
+      const total = list.length;
+      const paginated = list.slice(offset, offset + limit);
+      return { tools: paginated, total, limit, offset } as unknown as T;
     }
+
     if (url.includes('/api/dashboard/stats')) {
-      return { total_queries: 18, tools_verified: INITIAL_TOOLS.length, active_feed_items: INITIAL_FEED_ITEMS.length } as unknown as T;
+      return { total_queries: 18, tools_verified: FALLBACK_TOOLS.length, active_feed_items: INITIAL_FEED_ITEMS.length } as unknown as T;
     }
+
     if (url.includes('/api/audit')) {
       return { audit_logs: [], total: 0 } as unknown as T;
     }
+
     if (url.includes('/api/saved')) {
-      return { saved: [] } as unknown as T;
+      return { saved: [], counts: { all: 0, tools: 0, models: 0, feed: 0 } } as unknown as T;
     }
+
     throw err;
   }
 }
