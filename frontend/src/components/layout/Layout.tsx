@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Sidebar } from './Sidebar';
 import { ThemeToggle } from '../brand/ThemeToggle';
-import { User, Menu, X, ShieldCheck } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { User, Menu, X, Layers, Wrench, Cpu, Bookmark, Bell } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 
 interface LayoutProps {
@@ -21,6 +21,21 @@ export const Layout: React.FC<LayoutProps> = ({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isHealthy, setIsHealthy] = useState<boolean>(true);
   const { user } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const bottomTabs = [
+    { label: 'Feed', href: '/dashboard', icon: Layers },
+    { label: 'Tools', href: '/tools', icon: Wrench },
+    { label: 'Models', href: '/models', icon: Cpu },
+    { label: 'Saved', href: '/saved', icon: Bookmark },
+    { label: 'Alerts', href: '/alerts', icon: Bell },
+  ];
+
+  const isTabActive = (href: string) => {
+    if (href === '/dashboard') return location.pathname === '/dashboard';
+    return location.pathname.startsWith(href);
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -44,12 +59,12 @@ export const Layout: React.FC<LayoutProps> = ({
 
   return (
     <div className="min-h-screen bg-surface-base text-text-primary antialiased selection:bg-accent-indigo selection:text-white flex flex-col">
-      {/* Mobile Header Bar */}
+      {/* Mobile & Tablet Header Bar */}
       <header className="lg:hidden fixed top-0 left-0 right-0 h-14 bg-surface-base/95 backdrop-blur-sm border-b border-border-hairline z-50 flex items-center justify-between px-4">
         {showSidebar && (
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-1.5 text-text-primary hover:bg-surface-card rounded-md transition-colors"
+            className="hidden md:flex lg:hidden p-1.5 text-text-primary hover:bg-surface-card rounded-md transition-colors"
             aria-label="Toggle Navigation Menu"
           >
             {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -103,9 +118,9 @@ export const Layout: React.FC<LayoutProps> = ({
         </div>
       )}
 
-      {/* Mobile Drawer Sidebar */}
+      {/* Tablet Drawer Sidebar (768px - 1023px) */}
       {showSidebar && mobileMenuOpen && (
-        <div className="lg:hidden fixed inset-0 z-50 flex">
+        <div className="hidden md:flex lg:hidden fixed inset-0 z-50">
           <div
             className="fixed inset-0 bg-black/60 backdrop-blur-xs"
             onClick={() => setMobileMenuOpen(false)}
@@ -125,9 +140,9 @@ export const Layout: React.FC<LayoutProps> = ({
 
       {/* Main Content Area */}
       <div
-        className={`flex-1 pt-14 lg:pt-14 ${showSidebar ? 'lg:pl-[240px]' : ''} ${
-          showRightSidebar ? 'lg:pr-[360px]' : ''
-        }`}
+        className={`flex-1 pt-14 lg:pt-14 ${
+          showSidebar ? 'pb-[72px] md:pb-0 lg:pl-[240px]' : ''
+        } ${showRightSidebar ? 'lg:pr-[360px]' : ''}`}
       >
         <main className="relative min-h-[calc(100vh-56px)]">{children}</main>
         {/* On mobile screens, show the right sidebar content stacked below the main content */}
@@ -137,6 +152,34 @@ export const Layout: React.FC<LayoutProps> = ({
           </aside>
         )}
       </div>
+
+      {/* Bottom Tab Bar (Mobile only, < 768px) */}
+      {showSidebar && (
+        <nav
+          aria-label="Mobile Navigation"
+          className="fixed bottom-0 left-0 right-0 h-[64px] bg-surface-base/95 backdrop-blur-md border-t border-border-hairline z-40 flex items-center justify-around px-2 md:hidden"
+        >
+          {bottomTabs.map((tab) => {
+            const Icon = tab.icon;
+            const active = isTabActive(tab.href);
+            return (
+              <button
+                key={tab.label}
+                type="button"
+                onClick={() => navigate(tab.href)}
+                className={`flex flex-col items-center justify-center flex-1 h-full py-1 gap-1 transition-colors cursor-pointer ${
+                  active
+                    ? 'text-accent-indigo font-medium'
+                    : 'text-text-muted hover:text-text-primary'
+                }`}
+              >
+                <Icon className="w-5 h-5" />
+                <span className="text-[11px] leading-none">{tab.label}</span>
+              </button>
+            );
+          })}
+        </nav>
+      )}
     </div>
   );
 };

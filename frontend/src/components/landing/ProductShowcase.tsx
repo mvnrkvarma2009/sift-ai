@@ -11,6 +11,7 @@ import {
 import { Link } from 'react-router-dom';
 import { useTheme } from 'next-themes';
 import { useLenis } from '../common/SmoothScroll';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
 
 const easeSnap = [0.16, 1, 0.3, 1] as const;
 const stepSpring = { type: 'spring', stiffness: 200, damping: 22, mass: 0.6 } as const;
@@ -19,15 +20,14 @@ export function ProductShowcase() {
   const sectionRef = useRef<HTMLDivElement>(null);
   const stickyRef = useRef<HTMLDivElement>(null);
   const shouldReduceMotion = useReducedMotion();
-  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
-  const isMobile = windowWidth < 768;
-  const isTablet = windowWidth >= 768 && windowWidth <= 1024;
+  const isMobile = useMediaQuery('(max-width: 767px)');
 
   // FIX 1 — Lenis Scroll Progress Sync
   const lenis = useLenis();
   const rawProgress = useMotionValue(0);
 
   useEffect(() => {
+    if (isMobile) return;
     const container = sectionRef.current;
     if (!container) return;
 
@@ -53,7 +53,7 @@ export function ProductShowcase() {
         window.removeEventListener('scroll', onScroll);
       };
     }
-  }, [lenis, rawProgress]);
+  }, [lenis, rawProgress, isMobile]);
 
   // FIX 1 & FIX 5 — Spring Smoothing on Scroll Progress (bypassed if prefers-reduced-motion)
   const springProgress = useSpring(rawProgress, {
@@ -84,14 +84,6 @@ export function ProductShowcase() {
     setMounted(true);
   }, []);
   const isDark = mounted ? (resolvedTheme || theme) === 'dark' : true;
-
-  // Viewport resize tracking
-  useEffect(() => {
-    const handleResize = () => setWindowWidth(window.innerWidth);
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
 
   // Navigation helper for step indicator clicks
   const scrollToSlide = (index: 0 | 1 | 2) => {
@@ -151,23 +143,45 @@ export function ProductShowcase() {
     },
   ];
 
-  // Slide 2 Verdict Rows (2 rows to prevent overflow on all viewports)
-  const verdictRows = [
+  // Slide 2 Verdict Rows with concrete rules
+  interface VerdictRow {
+    name: string;
+    provider: string;
+    verdict: 'MEETS' | 'PARTIAL';
+    rules: {
+      name: string;
+      verdict: 'PASS' | 'FLAG';
+      reason: string;
+    }[];
+  }
+
+  const verdictRows: VerdictRow[] = [
     {
       name: 'Cursor',
       provider: 'Anysphere',
-      reason: 'Free tier · TypeScript · VS Code',
-      secondary: '2,000 completions/month',
       verdict: 'MEETS',
-      type: 'teal',
+      rules: [
+        { name: 'budget_check', verdict: 'PASS', reason: 'Free Hobby tier, no credit card required' },
+        { name: 'category_match', verdict: 'PASS', reason: 'Coding assistant, matches task' },
+      ],
     },
     {
       name: 'Codeium',
       provider: 'Codeium',
-      reason: 'Free forever · TypeScript · VS Code',
-      secondary: 'Unlimited completions',
       verdict: 'MEETS',
-      type: 'teal',
+      rules: [
+        { name: 'budget_check', verdict: 'PASS', reason: 'Free forever, no paid tier needed' },
+        { name: 'category_match', verdict: 'PASS', reason: 'Coding assistant, matches task' },
+      ],
+    },
+    {
+      name: 'GitHub Copilot',
+      provider: 'GitHub',
+      verdict: 'PARTIAL',
+      rules: [
+        { name: 'budget_check', verdict: 'FLAG', reason: 'Free tier capped at 2,000 completions/month' },
+        { name: 'category_match', verdict: 'PASS', reason: 'Coding assistant, matches task' },
+      ],
     },
   ];
 
@@ -197,8 +211,8 @@ export function ProductShowcase() {
   };
 
   // RENDER SLIDE 1 (Tight stacking, hairlines, 1:1 pixel rendering)
-  const renderSlide1 = (isMobileCard?: boolean) => {
-    const displayedItems = isMobileCard ? newsItems.slice(0, 3) : newsItems.slice(0, 4);
+  const renderSlide1 = () => {
+    const displayedItems = newsItems.slice(0, 4);
     const isActive = activeIndex === 0;
 
     return (
@@ -207,7 +221,7 @@ export function ProductShowcase() {
           display: 'flex',
           flexDirection: 'column',
           height: '100%',
-          padding: isMobileCard ? '0px' : '28px 40px',
+          padding: '28px 40px',
           boxSizing: 'border-box',
           overflow: 'hidden',
         }}
@@ -300,8 +314,8 @@ export function ProductShowcase() {
     );
   };
 
-  // RENDER SLIDE 2 (Verdict List with Pill Tag)
-  const renderSlide2 = (isMobileCard?: boolean) => {
+  // RENDER SLIDE 2 (Verdict List with Concrete Rules)
+  const renderSlide2 = () => {
     const isActive = activeIndex === 1;
 
     return (
@@ -310,7 +324,7 @@ export function ProductShowcase() {
           display: 'flex',
           flexDirection: 'column',
           height: '100%',
-          padding: isMobileCard ? '0px' : '28px 40px',
+          padding: '24px 36px',
           boxSizing: 'border-box',
           overflow: 'hidden',
         }}
@@ -332,31 +346,22 @@ export function ProductShowcase() {
             initial={shouldReduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 8 }}
             animate={isActive ? { opacity: 1, y: 0 } : { opacity: 0, y: 8 }}
             transition={{ duration: 0.30, delay: 0.06, ease: easeSnap }}
-            className="font-sans text-[20px] sm:text-[22px] font-semibold text-[var(--text-primary)] mt-1 leading-[1.2]"
+            className="font-sans text-[19px] sm:text-[21px] font-semibold text-[var(--text-primary)] mt-1 leading-[1.2]"
           >
-            Free coding assistant with TypeScript support.
+            Three tools passed. Here's why.
           </motion.h2>
 
-          {/* Extracted constraints pills */}
-          <motion.div
+          <motion.p
             initial={shouldReduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 6 }}
             animate={isActive ? { opacity: 1, y: 0 } : { opacity: 0, y: 6 }}
             transition={{ duration: 0.25, delay: 0.12, ease: easeSnap }}
-            className="flex items-center gap-1.5 mt-2 flex-wrap"
+            className="text-[12px] italic text-[var(--text-muted)] mt-0.5 font-sans leading-[1.4]"
           >
-            <span className="px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-mono bg-[#14B8A6]/10 text-[#14B8A6] border border-[#14B8A6]/20 font-medium">
-              free tier
-            </span>
-            <span className="px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-mono bg-[var(--surface-elevated)] text-[var(--text-secondary)] border border-[var(--border)] font-medium">
-              TypeScript
-            </span>
-            <span className="px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-mono bg-[var(--surface-elevated)] text-[var(--text-secondary)] border border-[var(--border)] font-medium">
-              VS Code
-            </span>
-          </motion.div>
+            Your query: 'free coding assistant with TypeScript support'
+          </motion.p>
         </div>
 
-        {/* ZONE B — 2 Verdict Cards with FIX 2 Stagger */}
+        {/* ZONE B — 3 Verdict Rows with Rules (60% left, 40% right) */}
         <motion.div
           variants={staggerRowContainer}
           initial="hidden"
@@ -366,11 +371,12 @@ export function ProductShowcase() {
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'center',
-            gap: '8px',
+            gap: '6px',
             minHeight: 0,
             overflow: 'hidden',
-            margin: '8px 0',
+            margin: '6px 0',
           }}
+          className="divide-y divide-[var(--border)] border-t border-b border-[var(--border)] py-0.5"
         >
           {verdictRows.map((tool) => (
             <motion.div
@@ -380,28 +386,41 @@ export function ProductShowcase() {
                 flex: '0 0 auto',
                 minHeight: 0,
               }}
-              className="p-[10px_14px] rounded-[10px] bg-[var(--surface)] border border-[var(--border)] flex items-center justify-between gap-3 shadow-sm hover:border-[var(--border-hover)] transition-colors"
+              className="py-[6px] flex items-start justify-between gap-2 group"
             >
-              <div className="flex flex-col min-w-0">
+              {/* Left Column (60%) */}
+              <div className="w-[60%] flex flex-col min-w-0 pr-2">
                 <div className="flex items-baseline gap-2">
-                  <span className="font-sans font-semibold text-[14px] sm:text-[15px] text-[var(--text-primary)] leading-[1.2]">
+                  <span className="font-sans font-semibold text-[13px] sm:text-[14px] text-[var(--text-primary)] leading-[1.2]">
                     {tool.name}
                   </span>
-                  <span className="text-[11px] sm:text-[12px] text-[var(--text-muted)] font-sans">
-                    {tool.provider}
+                  <span className="text-[11px] text-[var(--text-muted)] font-sans">
+                    · {tool.provider}
                   </span>
                 </div>
-                <span className="text-[11px] sm:text-[12px] text-[var(--text-secondary)] font-sans leading-[1.4] mt-0.5">
-                  {tool.reason}
-                </span>
+                <div className="mt-1 flex flex-col gap-0.5 font-mono text-[9.5px] sm:text-[10px] uppercase text-[var(--text-secondary)] leading-tight">
+                  {tool.rules.map((rule, rIdx) => (
+                    <div key={rIdx} className="truncate">
+                      <span>{rule.name} · </span>
+                      <span className={rule.verdict === 'PASS' ? 'text-[#14B8A6] font-bold' : 'text-[#F59E0B] font-bold'}>
+                        {rule.verdict}
+                      </span>
+                      <span> — "{rule.reason}"</span>
+                    </div>
+                  ))}
+                </div>
               </div>
 
-              <div className="flex flex-col items-end gap-1 shrink-0">
-                <span className="px-2 sm:px-2.5 py-0.5 rounded text-[10px] sm:text-[11px] font-mono uppercase font-bold tracking-wider text-[#14B8A6] bg-[#14B8A6]/10 border border-[#14B8A6]/20">
-                  MEETS
-                </span>
-                <span className="font-mono text-[9px] sm:text-[10px] text-[var(--text-muted)]">
-                  {tool.secondary}
+              {/* Right Column (40%) */}
+              <div className="w-[40%] flex justify-end items-start shrink-0">
+                <span
+                  className={`px-2 sm:px-2.5 py-0.5 rounded text-[10px] sm:text-[11px] font-mono uppercase font-bold tracking-wider ${
+                    tool.verdict === 'MEETS'
+                      ? 'text-[#14B8A6] bg-[#14B8A6]/10 border border-[#14B8A6]/20'
+                      : 'text-[#F59E0B] bg-[#F59E0B]/10 border border-[#F59E0B]/20'
+                  }`}
+                >
+                  {tool.verdict}
                 </span>
               </div>
             </motion.div>
@@ -430,7 +449,7 @@ export function ProductShowcase() {
   };
 
   // RENDER SLIDE 3 (Audit Trail with Replayable Proof)
-  const renderSlide3 = (isMobileCard?: boolean) => {
+  const renderSlide3 = () => {
     const isActive = activeIndex === 2;
 
     return (
@@ -439,7 +458,7 @@ export function ProductShowcase() {
           display: 'flex',
           flexDirection: 'column',
           height: '100%',
-          padding: isMobileCard ? '0px' : '28px 40px',
+          padding: '28px 40px',
           boxSizing: 'border-box',
           overflow: 'hidden',
           justifyContent: 'space-between',
@@ -552,10 +571,170 @@ export function ProductShowcase() {
     );
   };
 
+  // PART B — FIX 1 & FIX 2: MOBILE VIEW (< 768px)
+  // No laptop mockup, no sticky scroll container, no 300vh pin. Stacked cards fallback.
+  if (isMobile) {
+    return (
+      <section className="w-full py-12 px-4 bg-[var(--background)]">
+        <div className="max-w-[480px] mx-auto flex flex-col">
+          {/* Card 1: Feed Card (3 news rows) */}
+          <div className="w-full rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 mb-4 shadow-sm">
+            {/* Zone A */}
+            <div className="flex justify-between mb-3 text-[10px] font-mono uppercase tracking-widest text-[var(--text-muted)]">
+              <span>TODAY · THU 25 SEP</span>
+              <span>EDITION 084</span>
+            </div>
+            {/* Headline */}
+            <h3 className="text-[18px] font-semibold mb-1 text-[var(--text-primary)]">
+              Five things that matter today.
+            </h3>
+            <p className="text-[12px] italic text-[var(--text-muted)] mb-3">
+              Filtered from 1,000+ sources.
+            </p>
+            {/* Rows (3 news rows) */}
+            <div className="flex flex-col gap-2.5 divide-y divide-[var(--border)]">
+              {newsItems.slice(0, 3).map((item, idx) => (
+                <div key={idx} className="flex items-center justify-between gap-3 text-[13px] pt-2 first:pt-0">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className={`font-mono text-[9px] uppercase font-bold shrink-0 ${item.tagColor}`}>
+                      {item.tag}
+                    </span>
+                    <span className="font-sans font-medium text-[var(--text-primary)] truncate">
+                      {item.headline}
+                    </span>
+                  </div>
+                  <span className="font-mono text-[10px] text-[var(--text-muted)] shrink-0">
+                    {item.time}
+                  </span>
+                </div>
+              ))}
+            </div>
+            {/* Footer */}
+            <div className="pt-3 mt-3 border-t border-[var(--border)] flex justify-between items-center text-[11px] text-[var(--text-muted)]">
+              <span>3 of 5 read</span>
+              <span className="text-[var(--text-secondary)]">Next edition 6 AM EST</span>
+            </div>
+          </div>
+
+          {/* Card 2: Verdict Card (2 verdict rows: Cursor MEETS, Codeium MEETS) */}
+          <div className="w-full rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 mb-4 shadow-sm">
+            {/* Zone A */}
+            <div className="flex justify-between mb-3 text-[10px] font-mono uppercase tracking-widest text-[var(--text-muted)]">
+              <span>TASK VERIFICATION</span>
+              <span className="text-[#14B8A6] font-semibold">RULE ENGINE · LIVE</span>
+            </div>
+            {/* Headline */}
+            <h3 className="text-[18px] font-semibold mb-1 text-[var(--text-primary)]">
+              Three tools passed. Here's why.
+            </h3>
+            <p className="text-[12px] italic text-[var(--text-muted)] mb-3">
+              Your query: 'free coding assistant with TypeScript support'
+            </p>
+            {/* Rows (2 verdict rows) */}
+            <div className="flex flex-col gap-3 divide-y divide-[var(--border)]">
+              {verdictRows.slice(0, 2).map((tool) => (
+                <div key={tool.name} className="flex items-start justify-between gap-2 pt-2.5 first:pt-0">
+                  <div className="w-[65%] min-w-0 pr-2">
+                    <div className="flex items-baseline gap-1.5">
+                      <span className="font-semibold text-[14px] text-[var(--text-primary)]">{tool.name}</span>
+                      <span className="text-[11px] text-[var(--text-muted)]">· {tool.provider}</span>
+                    </div>
+                    <div className="mt-1 flex flex-col gap-0.5 font-mono text-[9px] uppercase text-[var(--text-secondary)] leading-tight">
+                      {tool.rules.map((rule, rIdx) => (
+                        <div key={rIdx} className="truncate">
+                          <span>{rule.name} · </span>
+                          <span className="text-[#14B8A6] font-bold">{rule.verdict}</span>
+                          <span> — "{rule.reason}"</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="w-[35%] flex justify-end shrink-0">
+                    <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase font-bold tracking-wider text-[#14B8A6] bg-[#14B8A6]/10 border border-[#14B8A6]/20">
+                      {tool.verdict}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {/* Footer */}
+            <div className="pt-3 mt-3 border-t border-[var(--border)] flex justify-between items-center text-[11px]">
+              <span className="text-[var(--text-muted)]">45 more tools checked.</span>
+              <Link to="/audit/cursor" className="text-[var(--accent)] font-medium hover:underline">
+                See full audit →
+              </Link>
+            </div>
+          </div>
+
+          {/* Card 3: Audit Card (all 3 timeline events) */}
+          <div className="w-full rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 mb-4 shadow-sm">
+            {/* Zone A */}
+            <div className="flex justify-between mb-3 text-[10px] font-mono uppercase tracking-widest text-[var(--text-muted)]">
+              <span>AUDIT TRAIL · CURSOR</span>
+              <span className="text-[#059669] dark:text-[#10B981] font-semibold flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#059669] dark:bg-[#10B981]" />
+                SHA-256 SIGNED
+              </span>
+            </div>
+            {/* Headline */}
+            <h3 className="text-[18px] font-semibold mb-1 text-[var(--text-primary)]">
+              Every Sift answer comes with proof.
+            </h3>
+            <p className="text-[12px] italic text-[var(--text-muted)] mb-3">
+              See exactly how we reached this verdict.
+            </p>
+            {/* Rows (all 3 timeline events) */}
+            <div className="flex flex-col gap-3">
+              {/* Step 01 */}
+              <div className="flex flex-col gap-0.5">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-[11px] font-bold text-[var(--accent)]">01</span>
+                  <span className="font-sans text-[13px] font-semibold text-[var(--text-primary)]">You asked</span>
+                </div>
+                <p className="text-[12px] text-[var(--text-secondary)] font-sans italic pl-5">
+                  "I need a free coding assistant for TypeScript"
+                </p>
+              </div>
+
+              {/* Step 02 */}
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-[11px] font-bold text-[var(--accent)]">02</span>
+                  <span className="font-sans text-[13px] font-semibold text-[var(--text-primary)]">We extracted 3 requirements</span>
+                </div>
+                <div className="flex items-center gap-1.5 pl-5 flex-wrap">
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-mono border border-[var(--border)] bg-[var(--surface-elevated)] text-[var(--text-secondary)]">Coding</span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-mono border border-[var(--border)] bg-[var(--surface-elevated)] text-[var(--text-secondary)]">Free</span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-mono border border-[var(--border)] bg-[var(--surface-elevated)] text-[var(--text-secondary)]">TypeScript</span>
+                </div>
+              </div>
+
+              {/* Step 03 */}
+              <div className="flex flex-col gap-0.5">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-[11px] font-bold text-[var(--accent)]">03</span>
+                  <span className="font-sans text-[13px] font-semibold text-[var(--text-primary)]">Rules verified 47 tools</span>
+                </div>
+                <p className="text-[12px] text-[var(--text-secondary)] font-sans pl-5">
+                  Cursor passed all checks. 46 others filtered out.
+                </p>
+              </div>
+            </div>
+            {/* Footer */}
+            <div className="pt-3 mt-3 border-t border-[var(--border)] flex justify-between items-center text-[11px] text-[var(--text-muted)]">
+              <span>Built by <span className="text-[var(--accent)] font-medium">Nagendra Varma</span></span>
+              <span className="font-mono">Made in 2026</span>
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section
       ref={sectionRef}
-      style={{ height: isMobile ? '200vh' : '300vh' }}
+      style={{ height: '300vh' }}
       className="relative w-full bg-[var(--background)]"
     >
       <div
@@ -573,15 +752,6 @@ export function ProductShowcase() {
           padding: '10px 0',
         }}
       >
-        {/* Mobile (<768px): Full-width card with hairline border */}
-        <div className="w-full max-w-[480px] mx-auto px-2 relative z-10 block md:hidden">
-          <div className="w-full border border-[var(--border)] rounded-[14px] p-5 shadow-xl bg-[var(--surface)] relative overflow-hidden flex flex-col justify-between min-h-[460px]">
-            {activeIndex === 0 && renderSlide1(true)}
-            {activeIndex === 1 && renderSlide2(true)}
-            {activeIndex === 2 && renderSlide3(true)}
-          </div>
-        </div>
-
         {/* Desktop & Tablet: Wrap laptop + headline + step indicator in a single flex-col */}
         <div
           style={{
@@ -591,7 +761,7 @@ export function ProductShowcase() {
             justifyContent: 'center',
             width: '100%',
           }}
-          className="hidden md:flex flex-col items-center justify-center w-full"
+          className="flex flex-col items-center justify-center w-full"
         >
           {/* FRONT-FACING LAPTOP FRAME — Motion A Entrance */}
           <motion.div

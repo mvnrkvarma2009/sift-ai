@@ -92,7 +92,7 @@ export const ModelsDirectorySection: React.FC = () => {
                       <span className="text-[12px] text-text-muted shrink-0">· {m.provider}</span>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <span className="font-mono text-[11px] text-text-secondary bg-surface-elevated/70 border border-border-hairline px-2 py-0.5 rounded">
+                      <span className="font-mono text-[10px] sm:text-[11px] text-text-secondary bg-surface-elevated/70 border border-border-hairline px-2 py-0.5 rounded truncate max-w-[120px] sm:max-w-none">
                         {m.skills}
                       </span>
                       <ArrowRight className="w-3.5 h-3.5 text-accent-indigo opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -130,7 +130,7 @@ export const ModelsDirectorySection: React.FC = () => {
                       <span className="text-[12px] text-text-muted shrink-0">· {m.provider}</span>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <span className="font-mono text-[11px] text-text-secondary bg-surface-elevated/70 border border-border-hairline px-2 py-0.5 rounded">
+                      <span className="font-mono text-[10px] sm:text-[11px] text-text-secondary bg-surface-elevated/70 border border-border-hairline px-2 py-0.5 rounded truncate max-w-[120px] sm:max-w-none">
                         {m.skills}
                       </span>
                       <ArrowRight className="w-3.5 h-3.5 text-accent-indigo opacity-0 group-hover:opacity-100 transition-opacity" />

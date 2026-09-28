@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ModelItem, savedApi } from '../../lib/api';
-import { Bookmark } from 'lucide-react';
+import { Bookmark, ArrowUpRight } from 'lucide-react';
 
 interface ModelCardProps {
   model: ModelItem;
@@ -143,6 +143,17 @@ export const ModelCard: React.FC<ModelCardProps> = ({
 
   const gpuBadge = extractGpuBadge();
 
+  // Destination URL priority: 1. chat_product_url, 2. docs_url, 3. hf_url (for open source)
+  const getDestinationUrl = (): string | null => {
+    if (model.chat_product_url && model.chat_product_url.trim()) return model.chat_product_url;
+    if (model.docs_url && model.docs_url.trim()) return model.docs_url;
+    if (model.documentation_url && model.documentation_url.trim()) return model.documentation_url;
+    if (isOpenSource && model.hf_url && model.hf_url.trim()) return model.hf_url;
+    return null;
+  };
+
+  const destination = getDestinationUrl();
+
   return (
     <div
       className={`p-4 sm:p-5 rounded-xl bg-surface-card border transition-all flex flex-col justify-between group hover:border-accent-indigo relative h-[260px] ${
@@ -153,7 +164,7 @@ export const ModelCard: React.FC<ModelCardProps> = ({
     >
       {/* TOP SECTION */}
       <div>
-        {/* TOP ROW: Type badge left, compare + bookmark right */}
+        {/* TOP ROW: Type badge left, open + compare + bookmark right */}
         <div className="flex items-center justify-between gap-2 mb-2">
           <div className="flex items-center gap-1.5 flex-wrap">
             {isClosedSource ? (
@@ -174,6 +185,23 @@ export const ModelCard: React.FC<ModelCardProps> = ({
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
+            {destination && (
+              <a
+                href={destination}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="group inline-flex items-center gap-1 text-[11px] font-medium text-[var(--text-secondary)] hover:text-[var(--accent)] transition-colors duration-150"
+                aria-label={`Open ${model.name} in a new tab`}
+              >
+                Open
+                <ArrowUpRight
+                  size={12}
+                  className="transition-transform duration-150 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+                />
+              </a>
+            )}
+
             {/* Bookmark button */}
             <button
               onClick={handleToggleSave}

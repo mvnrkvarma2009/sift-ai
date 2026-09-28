@@ -145,25 +145,25 @@ export const Hero: React.FC = () => {
             Every AI release, funding round, and tool launch — read in five minutes. 1,000+ tools verified against your requirements with transparent, deterministic rules.
           </motion.p>
 
-          {/* Two buttons, inline: delay 700ms, stagger 80ms */}
+          {/* Two buttons: stacked on mobile, inline on desktop */}
           <motion.div
             variants={heroButtonContainerVariants}
             initial="initial"
             animate="animate"
-            className="mt-[28px] flex flex-wrap items-center gap-4"
+            className="mt-[28px] flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 w-full sm:w-auto"
           >
-            <motion.div variants={heroButtonVariants}>
+            <motion.div variants={heroButtonVariants} className="w-full sm:w-auto">
               <Link
                 to="/dashboard"
-                className="inline-flex items-center justify-center bg-accent-indigo text-white text-[14px] font-medium px-[18px] py-[8px] rounded-full hover:bg-accent-indigo/90 transition-colors cursor-pointer"
+                className="inline-flex w-full sm:w-auto items-center justify-center bg-accent-indigo text-white text-[14px] font-medium px-[18px] py-[10px] sm:py-[8px] rounded-full hover:bg-accent-indigo/90 transition-colors cursor-pointer text-center"
               >
                 Open today's feed
               </Link>
             </motion.div>
-            <motion.div variants={heroButtonVariants}>
+            <motion.div variants={heroButtonVariants} className="w-full sm:w-auto">
               <a
                 href="#how-it-works"
-                className="inline-flex items-center justify-center border border-border-hairline bg-transparent text-text-primary text-[14px] font-medium px-[18px] py-[8px] rounded-full hover:bg-surface-card hover:border-outline-variant transition-colors"
+                className="inline-flex w-full sm:w-auto items-center justify-center border border-border-hairline bg-transparent text-text-primary text-[14px] font-medium px-[18px] py-[10px] sm:py-[8px] rounded-full hover:bg-surface-card hover:border-outline-variant transition-colors text-center"
               >
                 See how it works
               </a>
@@ -190,7 +190,7 @@ export const Hero: React.FC = () => {
             }
             className="w-full flex items-center justify-center"
           >
-            <div className="w-full h-[240px] sm:h-[320px] lg:h-[min(60vh,440px)] max-h-[60vh] relative overflow-hidden rounded-[16px] border border-border-hairline bg-surface-card">
+            <div className="w-full h-[min(40vh,320px)] lg:h-[min(60vh,440px)] max-h-[60vh] relative overflow-hidden rounded-[16px] border border-border-hairline bg-surface-card">
               <img
                 src={imgSrc}
                 alt="Aerial view of a calm coastline at dawn"

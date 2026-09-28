@@ -124,7 +124,7 @@ export const WhichAIForWhat: React.FC = () => {
             initial="hidden"
             whileInView="show"
             viewport={{ once: true, amount: 0.1 }}
-            className="mt-[64px] w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
+            className="mt-[64px] w-full grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4"
           >
             {CATEGORIES.map((cat) => {
               const Icon = cat.icon;
@@ -139,7 +139,7 @@ export const WhichAIForWhat: React.FC = () => {
                   }
                   transition={{ duration: 0.2, ease: 'easeOut' }}
                   onClick={() => handleCategoryClick(cat.taskParam)}
-                  className="p-5 rounded-[12px] border border-border-hairline bg-surface-card hover:bg-surface-elevated transition-colors text-left cursor-pointer group flex flex-col justify-between min-h-[110px]"
+                  className="p-3.5 sm:p-5 rounded-[12px] border border-border-hairline bg-surface-card hover:bg-surface-elevated transition-colors text-left cursor-pointer group flex flex-col justify-between min-h-[105px] sm:min-h-[110px]"
                 >
                   <div className="flex items-center justify-between w-full">
                     <motion.span variants={iconVariants} className="inline-flex">
