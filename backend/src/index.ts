@@ -64,6 +64,8 @@ app.use(responseSanitizer);
 // Health check endpoint
 app.get(['/health', '/api/health'], (req: Request, res: Response) => {
   res.status(200).json({
+    ok: true,
+    ts: new Date().toISOString(),
     status: 'healthy',
     service: 'sift-backend',
     version: '1.0.0',

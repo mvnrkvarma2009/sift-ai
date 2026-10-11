@@ -13,26 +13,23 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction):
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    req.user = {
-      userId: '00000000-0000-0000-0000-000000000001',
-      email: 'builder@sift.dev',
-    };
-    next();
+    res.status(401).json({ error: 'Unauthorized: Authentication token required' });
     return;
   }
 
   const token = authHeader.split(' ')[1];
+  if (!token) {
+    res.status(401).json({ error: 'Unauthorized: Authentication token required' });
+    return;
+  }
 
   try {
     const decoded = verifyToken(token);
     req.user = decoded;
     next();
   } catch (err: any) {
-    req.user = {
-      userId: '00000000-0000-0000-0000-000000000001',
-      email: 'builder@sift.dev',
-    };
-    next();
+    res.status(401).json({ error: 'Unauthorized: Invalid or expired token' });
+    return;
   }
 }
 

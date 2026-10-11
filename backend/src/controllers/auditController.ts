@@ -88,6 +88,9 @@ export async function getQueryAuditTrail(req: Request, res: Response): Promise<v
     res.status(200).json({
       query_id: queryId,
       events: result.rows,
+      audit_logs: result.rows,
+      entries: result.rows,
+      total: result.rows.length,
     });
   } catch (error: any) {
     console.error('[AUDIT] Failed to fetch query audit trail:', error);

@@ -589,9 +589,16 @@ export interface NotificationItem {
 }
 
 export const notificationsApi = {
-  getNotifications: (limit = 50) =>
-    apiRequest<{ notifications: NotificationItem[]; total: number }>(`/api/notifications?limit=${limit}`),
-  getUnreadCount: () => apiRequest<{ count: number }>('/api/notifications/unread-count'),
+  getNotifications: async (limit = 50) => {
+    const res = await apiRequest<any>(`/api/notifications?limit=${limit}`);
+    const list = Array.isArray(res) ? res : (res?.notifications || []);
+    return { notifications: list, total: list.length };
+  },
+  getUnreadCount: async () => {
+    const res = await apiRequest<any>('/api/notifications/unread-count');
+    if (typeof res === 'number') return { count: res };
+    return { count: res?.count ?? 0 };
+  },
   markAsRead: (id: string) =>
     apiRequest<{ success: boolean; id: string }>(`/api/notifications/${id}/read`, {
       method: 'PATCH',

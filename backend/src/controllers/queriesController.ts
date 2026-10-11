@@ -157,13 +157,39 @@ export async function submitQuery(req: Request, res: Response): Promise<void> {
       console.warn('[QUERIES] Failed to dispatch verdict notification:', notifErr.message);
     }
 
+    const meetsCount = verificationsList.filter(v => v.final_verdict === 'MEETS_REQUIREMENTS').length;
+    const partialCount = verificationsList.filter(v => v.final_verdict === 'PARTIALLY_MEETS').length;
+    const rejectedCount = verificationsList.filter(v => v.final_verdict === 'DOES_NOT_MEET').length;
+    const summary = {
+      checked: tools.length,
+      meets: meetsCount,
+      partial: partialCount,
+      rejected: rejectedCount,
+    };
+
+    const results = verificationsList.map(v => ({
+      ...v,
+      name: v.tool?.name,
+      tool_name: v.tool?.name,
+    }));
+
     res.status(201).json({
       id: queryId,
+      query: {
+        id: queryId,
+        user_id: userId,
+        raw_description: promptText.trim(),
+        extracted_requirements: requirements,
+        status: 'completed',
+        created_at: queryRecord.created_at,
+      },
       user_id: userId,
       raw_description: promptText.trim(),
       extracted_requirements: requirements,
       status: 'completed',
       created_at: queryRecord.created_at,
+      summary,
+      results,
       verifications: verificationsList,
     });
   } catch (error: any) {

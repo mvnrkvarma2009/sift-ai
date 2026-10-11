@@ -52,7 +52,7 @@ export const memoryStore = {
     {
       id: '00000000-0000-0000-0000-000000000002',
       email: 'demo@sift.ai',
-      password_hash: '$2a$10$wTzhPpch51gDNA/jnE20gOqs8gVUKcPihrW8bAWjI3wMkphP3sx3K',
+      password_hash: '$2a$10$2HOpl3hmH41uWI2ag7V1ouUQnE6Shp5dgj1ZO8udseHg9V2CofLvK',
       name: 'Demo User',
       created_at: new Date(),
       updated_at: new Date(),
@@ -185,7 +185,7 @@ function fallbackQuery(text: string, params: any[]): { rows: any[]; rowCount: nu
   }
 
   // SELECT tools
-  if (/SELECT.*FROM tools/i.test(normalized)) {
+  if (/FROM\s+tools\b/i.test(normalized) && !/FROM\s+verifications\b/i.test(normalized)) {
     let list = [...memoryStore.tools];
 
     // Handle tool by ID
@@ -242,6 +242,34 @@ function fallbackQuery(text: string, params: any[]): { rows: any[]; rowCount: nu
       list.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime() || (b.trending_percent || 0) - (a.trending_percent || 0));
     } else {
       list.sort((a, b) => (b.trending_percent || 0) - (a.trending_percent || 0));
+    }
+
+    if (/GROUP BY\s+category/i.test(normalized)) {
+      const counts: Record<string, number> = {};
+      for (const t of list) {
+        const cat = t.category || 'General';
+        counts[cat] = (counts[cat] || 0) + 1;
+      }
+      const grouped = Object.entries(counts).map(([category, count]) => ({
+        category,
+        count: String(count),
+      }));
+      grouped.sort((a, b) => Number(b.count) - Number(a.count));
+      return { rows: grouped, rowCount: grouped.length };
+    }
+
+    if (/GROUP BY\s+pricing/i.test(normalized)) {
+      const counts: Record<string, number> = {};
+      for (const t of list) {
+        const p = t.pricing || 'free_tier';
+        counts[p] = (counts[p] || 0) + 1;
+      }
+      const grouped = Object.entries(counts).map(([pricing, count]) => ({
+        pricing,
+        count: String(count),
+      }));
+      grouped.sort((a, b) => Number(b.count) - Number(a.count));
+      return { rows: grouped, rowCount: grouped.length };
     }
 
     if (/count\(\*\)/i.test(normalized)) {
@@ -515,7 +543,7 @@ function fallbackQuery(text: string, params: any[]): { rows: any[]; rowCount: nu
   }
 
   // SELECT verifications
-  if (/SELECT.*FROM verifications/i.test(normalized)) {
+  if (/FROM\s+verifications\b/i.test(normalized)) {
     const queryId = params[0];
     const vers = memoryStore.verifications
       .filter(v => v.query_id === queryId)
@@ -554,7 +582,7 @@ function fallbackQuery(text: string, params: any[]): { rows: any[]; rowCount: nu
   }
 
   // SELECT rule_evaluations
-  if (/SELECT.*FROM rule_evaluations/i.test(normalized)) {
+  if (/FROM\s+rule_evaluations\b/i.test(normalized)) {
     const verId = params[0];
     const list = memoryStore.rule_evaluations.filter(r => r.verification_id === verId);
     return { rows: list, rowCount: list.length };
@@ -575,10 +603,14 @@ function fallbackQuery(text: string, params: any[]): { rows: any[]; rowCount: nu
   }
 
   // SELECT audit_logs
-  if (/SELECT.*FROM audit_logs/i.test(normalized)) {
+  if (/FROM\s+audit_logs\b/i.test(normalized)) {
     let list = [...memoryStore.audit_logs];
     if (params && params.length > 0) {
-      list = list.filter(l => l.user_id === params[0] || l.query_id === params[0]);
+      list = list.filter(l => 
+        l.user_id === params[0] || 
+        l.query_id === params[0] ||
+        (params.length > 1 && (l.user_id === params[1] || l.query_id === params[1]))
+      );
     }
     return { rows: list, rowCount: list.length };
   }

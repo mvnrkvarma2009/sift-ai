@@ -48,6 +48,7 @@ export const savedController = {
 
       return res.json({
         saved: hydrated,
+        items: hydrated,
         counts: {
           all: hydrated.length,
           tools: hydrated.filter((s: any) => s.item_type === 'tool').length,
@@ -97,7 +98,8 @@ export const savedController = {
         [userId, item_type, String(item_id)]
       );
 
-      return res.status(201).json({ saved: true, item: inserted.rows[0] });
+      const savedItem = inserted.rows[0];
+      return res.status(201).json({ saved: true, item: savedItem, id: savedItem.id });
     } catch (err: any) {
       console.error('[SAVED] toggleSaveItem error:', err);
       return res.status(500).json({ error: 'Failed to toggle saved item' });
@@ -118,7 +120,7 @@ export const savedController = {
         [id, userId]
       );
 
-      return res.json({ success: true, message: 'Saved item removed' });
+      return res.status(204).send();
     } catch (err: any) {
       console.error('[SAVED] removeSavedItem error:', err);
       return res.status(500).json({ error: 'Failed to delete saved item' });
