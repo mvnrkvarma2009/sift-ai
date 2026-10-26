@@ -22,10 +22,23 @@ import { ProfilePage } from '../pages/ProfilePage';
 import { AlertsPage } from '../pages/AlertsPage';
 import { NotFoundPage } from '../pages/NotFoundPage';
 
-// Protected Route Component: Redirects to /login if unauthenticated
 export const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated } = useAuth();
-  const token = typeof window !== 'undefined' ? (localStorage.getItem('sift_jwt') || localStorage.getItem('token')) : null;
+  const { isAuthenticated, authLoading } = useAuth();
+  const token =
+    typeof window !== 'undefined'
+      ? localStorage.getItem('sift_jwt') || localStorage.getItem('token')
+      : null;
+  const isOAuthCallback =
+    typeof window !== 'undefined' &&
+    (window.location.hash.includes('access_token') || window.location.search.includes('code='));
+
+  if (authLoading || isOAuthCallback) {
+    return (
+      <div className="min-h-screen bg-surface-base flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-accent-indigo border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   if (!isAuthenticated && !token) {
     return <Navigate to="/login" replace />;

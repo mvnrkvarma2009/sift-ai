@@ -14,6 +14,7 @@ export interface AuthContextType {
   user: User | null;
   token: string | null;
   isAuthenticated: boolean;
+  authLoading: boolean;
   login: (email: string, password?: string) => Promise<boolean>;
   loginWithGoogle: () => Promise<void>;
   continueAsGuest: () => void;
@@ -40,6 +41,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return null;
   });
 
+  const [authLoading, setAuthLoading] = useState<boolean>(true);
+
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('sift_jwt');
@@ -54,24 +57,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Sync Supabase Auth session (for Google OAuth redirects)
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        const supaUser: User = {
-          id: session.user.id,
-          email: session.user.email || '',
-          name:
-            session.user.user_metadata?.full_name ||
-            session.user.user_metadata?.name ||
-            session.user.email?.split('@')[0] ||
-            'User',
-          avatar: session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture,
-        };
-        setUser(supaUser);
-        setToken(session.access_token);
-        localStorage.setItem('sift_jwt', session.access_token);
-        localStorage.setItem('sift_user', JSON.stringify(supaUser));
-      }
-    });
+    supabase.auth
+      .getSession()
+      .then(({ data: { session } }) => {
+        if (session?.user) {
+          const supaUser: User = {
+            id: session.user.id,
+            email: session.user.email || '',
+            name:
+              session.user.user_metadata?.full_name ||
+              session.user.user_metadata?.name ||
+              session.user.email?.split('@')[0] ||
+              'User',
+            avatar: session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture,
+          };
+          setUser(supaUser);
+          setToken(session.access_token);
+          localStorage.setItem('sift_jwt', session.access_token);
+          localStorage.setItem('sift_user', JSON.stringify(supaUser));
+        }
+      })
+      .catch((err) => {
+        console.warn('[AUTH] Error reading initial session:', err);
+      })
+      .finally(() => {
+        setAuthLoading(false);
+      });
 
     const {
       data: { subscription },
@@ -207,6 +218,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         token,
         isAuthenticated: Boolean(token),
+        authLoading,
         login,
         loginWithGoogle,
         continueAsGuest,
