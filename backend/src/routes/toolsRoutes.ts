@@ -4,7 +4,7 @@ import { requireAuth, optionalAuth } from '../middleware/auth';
 
 const router = Router();
 
-router.get('/', requireAuth, getTools);
+router.get('/', optionalAuth, getTools);
 router.get('/stats', optionalAuth, getToolStats);
 router.get('/trending', optionalAuth, getTrendingTools);
 router.get('/:id', optionalAuth, getToolById);
