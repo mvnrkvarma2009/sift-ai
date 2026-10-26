@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Layout } from '../components/layout/Layout';
-import { Search, SearchX, Loader2, ArrowRight } from 'lucide-react';
+import { Search, SearchX, Loader2, ArrowRight, AlertCircle } from 'lucide-react';
 import { modelsApi, ModelItem } from '../lib/api';
 import { useNavigate } from 'react-router-dom';
 import { ModelCard } from '../components/models/ModelCard';
@@ -36,6 +36,7 @@ export const ModelsPage: React.FC = () => {
   const [models, setModels] = useState<ModelItem[]>([]);
   const [total, setTotal] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Compare State (2-4 models)
   const [compareIds, setCompareIds] = useState<string[]>([]);
@@ -54,6 +55,7 @@ export const ModelsPage: React.FC = () => {
 
     async function loadFilteredModels() {
       setLoading(true);
+      setError(null);
       try {
         const typeFilter = selectedType === 'all' ? undefined : selectedType;
         const categoryFilter = selectedCategory === 'all' ? undefined : selectedCategory;
@@ -72,11 +74,12 @@ export const ModelsPage: React.FC = () => {
           setModels(res.models || []);
           setTotal(res.total || 0);
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error('[MODELS] Failed to fetch models:', err);
         if (!isCancelled) {
           setModels([]);
           setTotal(0);
+          setError('Failed to load models. Please try again.');
         }
       } finally {
         if (!isCancelled) setLoading(false);
@@ -246,6 +249,24 @@ export const ModelsPage: React.FC = () => {
             <div className="p-16 text-center flex flex-col items-center justify-center space-y-3">
               <Loader2 className="w-6 h-6 animate-spin text-accent-indigo" />
               <span className="font-mono text-[13px] text-text-muted">Loading models...</span>
+            </div>
+          ) : error ? (
+            <div className="p-16 text-center rounded-xl bg-surface-card border border-border-hairline space-y-3">
+              <AlertCircle className="w-8 h-8 text-status-alert mx-auto" />
+              <p className="text-[15px] font-medium text-status-alert">{error}</p>
+              <p className="text-[13px] text-text-muted">
+                Unable to load foundation models from the server. Please check your connection and try again.
+              </p>
+              <button
+                onClick={() => {
+                  setSelectedType('all');
+                  setSelectedCategory('all');
+                  setSearch('');
+                }}
+                className="mt-2 px-4 py-2 rounded-lg bg-accent-indigo text-white text-[12px] font-mono hover:bg-accent-indigo/90 transition-colors cursor-pointer"
+              >
+                Retry
+              </button>
             </div>
           ) : models.length === 0 ? (
             <div className="p-16 text-center rounded-xl bg-surface-card border border-border-hairline space-y-3">

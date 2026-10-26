@@ -254,7 +254,7 @@ export function ProductShowcase() {
             transition={{ duration: 0.25, delay: 0.12, ease: easeSnap }}
             className="text-[12px] sm:text-[13px] italic text-[var(--text-muted)] mt-0.5 font-sans leading-[1.4]"
           >
-            Filtered from 1,000+ sources.
+            Filtered from verified sources.
           </motion.p>
         </div>
 
@@ -589,7 +589,7 @@ export function ProductShowcase() {
               Five things that matter today.
             </h3>
             <p className="text-[12px] italic text-[var(--text-muted)] mb-3">
-              Filtered from 1,000+ sources.
+              Filtered from verified sources.
             </p>
             {/* Rows (3 news rows) */}
             <div className="flex flex-col gap-2.5 divide-y divide-[var(--border)]">

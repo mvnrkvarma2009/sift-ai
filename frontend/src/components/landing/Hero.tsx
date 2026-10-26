@@ -142,7 +142,7 @@ export const Hero: React.FC = () => {
             }
             className="mt-[20px] text-[15px] sm:text-[17px] leading-[1.6] text-text-secondary font-normal max-w-[440px]"
           >
-            Every AI release, funding round, and tool launch — read in five minutes. 1,000+ tools verified against your requirements with transparent, deterministic rules.
+            Every AI release, funding round, and tool launch — read in five minutes. Verified tools checked against your requirements with transparent, deterministic rules.
           </motion.p>
 
           {/* Two buttons: stacked on mobile, inline on desktop */}

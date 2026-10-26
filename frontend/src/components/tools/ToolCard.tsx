@@ -82,44 +82,8 @@ export const ToolCard: React.FC<ToolCardProps> = ({
       setSaving(true);
       const res = await savedApi.toggleSave('tool', toolId);
       setIsSaved(res.saved);
-      const local = JSON.parse(localStorage.getItem('sift_saved_items') || '[]');
-      if (res.saved) {
-        if (!local.some((item: any) => item.item_type === 'tool' && item.item_id === toolId)) {
-          local.unshift({
-            id: `saved_t_${Date.now()}`,
-            user_id: 'builder',
-            item_type: 'tool',
-            item_id: toolId,
-            created_at: new Date().toISOString(),
-            item: tool,
-          });
-        }
-      } else {
-        const filtered = local.filter((item: any) => !(item.item_type === 'tool' && item.item_id === toolId));
-        localStorage.setItem('sift_saved_items', JSON.stringify(filtered));
-        return;
-      }
-      localStorage.setItem('sift_saved_items', JSON.stringify(local));
     } catch (err) {
       console.error('Failed to toggle save tool:', err);
-      const local = JSON.parse(localStorage.getItem('sift_saved_items') || '[]');
-      const exists = local.some((item: any) => item.item_type === 'tool' && item.item_id === toolId);
-      if (exists) {
-        const filtered = local.filter((item: any) => !(item.item_type === 'tool' && item.item_id === toolId));
-        localStorage.setItem('sift_saved_items', JSON.stringify(filtered));
-        setIsSaved(false);
-      } else {
-        local.unshift({
-          id: `saved_t_${Date.now()}`,
-          user_id: 'builder',
-          item_type: 'tool',
-          item_id: toolId,
-          created_at: new Date().toISOString(),
-          item: tool,
-        });
-        localStorage.setItem('sift_saved_items', JSON.stringify(local));
-        setIsSaved(true);
-      }
     } finally {
       setSaving(false);
     }

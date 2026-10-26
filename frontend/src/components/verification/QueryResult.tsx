@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Loader2 } from 'lucide-react';
-import { queriesApi, INITIAL_TOOLS, ToolResult } from '../../lib/api';
+import { ArrowLeft, Loader2, AlertCircle } from 'lucide-react';
+import { queriesApi, ToolResult } from '../../lib/api';
 import { ToolVerdictCard } from './ToolVerdictCard';
 import { RequirementPills } from './RequirementPills';
 
@@ -11,20 +11,22 @@ export const QueryResult: React.FC = () => {
   const qParam = searchParams.get('q');
 
   const [loading, setLoading] = useState<boolean>(Boolean(id));
+  const [error, setError] = useState<string | null>(null);
   const [queryData, setQueryData] = useState<any>(null);
-  const [toolsList, setToolsList] = useState<ToolResult[]>(INITIAL_TOOLS);
+  const [toolsList, setToolsList] = useState<ToolResult[]>([]);
 
   useEffect(() => {
     let isCancelled = false;
 
     if (id) {
       setLoading(true);
+      setError(null);
       queriesApi
         .getById(id)
         .then((data) => {
           if (!isCancelled && data) {
             setQueryData(data);
-            if (data.verifications && Array.isArray(data.verifications) && data.verifications.length > 0) {
+            if (data.verifications && Array.isArray(data.verifications)) {
               const formattedTools: ToolResult[] = data.verifications.map((v: any) => {
                 const toolObj = v.tool || {};
                 const evals = v.evaluations || [];
@@ -53,50 +55,32 @@ export const QueryResult: React.FC = () => {
           }
         })
         .catch((err) => {
-          console.warn('[QUERY RESULT] Failed to fetch query details:', err.message);
+          console.error('[QUERY RESULT] Failed to fetch query details:', err?.message || err);
+          if (!isCancelled) {
+            setError('Failed to load verification results. Please try again.');
+          }
         })
         .finally(() => {
           if (!isCancelled) {
             setLoading(false);
           }
         });
-    } else if (qParam) {
-      const qLower = qParam.toLowerCase();
-      setToolsList((prev) => {
-        return [...prev].sort((a, b) => {
-          const matchA =
-            (a.category.toLowerCase().includes('pres') && (qLower.includes('pres') || qLower.includes('slide') || qLower.includes('pptx'))) ||
-            (a.category.toLowerCase().includes('code') && (qLower.includes('code') || qLower.includes('typescript') || qLower.includes('vs code'))) ||
-            (a.category.toLowerCase().includes('writing') && (qLower.includes('write') || qLower.includes('blog') || qLower.includes('essay'))) ||
-            (a.category.toLowerCase().includes('audio') && (qLower.includes('audio') || qLower.includes('transcri') || qLower.includes('podcast')));
-          const matchB =
-            (b.category.toLowerCase().includes('pres') && (qLower.includes('pres') || qLower.includes('slide') || qLower.includes('pptx'))) ||
-            (b.category.toLowerCase().includes('code') && (qLower.includes('code') || qLower.includes('typescript') || qLower.includes('vs code'))) ||
-            (b.category.toLowerCase().includes('writing') && (qLower.includes('write') || qLower.includes('blog') || qLower.includes('essay'))) ||
-            (b.category.toLowerCase().includes('audio') && (qLower.includes('audio') || qLower.includes('transcri') || qLower.includes('podcast')));
-          if (matchA && !matchB) return -1;
-          if (!matchA && matchB) return 1;
-          return 0;
-        });
-      });
+    } else {
+      setLoading(false);
+      setError('No query ID provided. Please submit a query from the verification input.');
     }
 
     return () => {
       isCancelled = true;
     };
-  }, [id, qParam]);
+  }, [id]);
 
-  const displayQuery = queryData?.raw_description || qParam || 'I need a free presentation tool with PPTX export.';
+  const displayQuery = queryData?.raw_description || qParam || '';
 
   // Build requirement pills from extracted requirements if available
   const requirementsList = React.useMemo(() => {
     if (!queryData?.extracted_requirements) {
-      return [
-        { label: 'Budget: Free', status: 'success' as const },
-        { label: 'Signup: Not required', status: 'warn' as const },
-        { label: 'Export: PPTX', status: 'success' as const },
-        { label: 'Deterministic: 100%', status: 'success' as const },
-      ];
+      return [];
     }
     const reqs = queryData.extracted_requirements;
     const pills: Array<{ label: string; status: 'success' | 'warn' | 'info' }> = [];
@@ -123,12 +107,7 @@ export const QueryResult: React.FC = () => {
         });
       }
     }
-    return pills.length > 0
-      ? pills
-      : [
-          { label: 'Budget: Free', status: 'success' as const },
-          { label: 'Verification: Complete', status: 'success' as const },
-        ];
+    return pills;
   }, [queryData]);
 
   // Compute breakdown stats
@@ -166,35 +145,70 @@ export const QueryResult: React.FC = () => {
       </div>
 
       {/* Query Quote Card — shows user's ACTUAL query */}
-      <div className="p-5 rounded-xl bg-surface-card border border-border-hairline border-l-2 border-l-accent-indigo">
-        <p className="text-[16px] text-text-primary italic font-normal tracking-normal leading-relaxed">
-          “{displayQuery}”
-        </p>
-        <div className="mt-3 flex items-center gap-2">
-          <span className="font-mono text-[10px] uppercase text-text-muted tracking-wider">
-            {requirementsList.length} requirements extracted via Gemini
-          </span>
+      {displayQuery && (
+        <div className="p-5 rounded-xl bg-surface-card border border-border-hairline border-l-2 border-l-accent-indigo">
+          <p className="text-[16px] text-text-primary italic font-normal tracking-normal leading-relaxed">
+            “{displayQuery}”
+          </p>
+          {requirementsList.length > 0 && (
+            <div className="mt-3 flex items-center gap-2">
+              <span className="font-mono text-[10px] uppercase text-text-muted tracking-wider">
+                {requirementsList.length} requirements extracted via Gemini
+              </span>
+            </div>
+          )}
         </div>
-      </div>
+      )}
 
       {/* Requirements Pills */}
-      <RequirementPills requirements={requirementsList} />
+      {requirementsList.length > 0 && (
+        <RequirementPills requirements={requirementsList} />
+      )}
 
       {/* Summary Bar: X tools checked, Y meets, Z partial, W rejected */}
-      <div className="flex items-center justify-between p-3 rounded-lg bg-surface-card border border-border-hairline font-mono text-[11px] text-text-muted">
-        <span>{totalChecked} TOOLS CHECKED</span>
-        <div className="flex items-center gap-3">
-          <span className="text-status-success">{meetsCount} MEETS</span>
-          <span className="text-accent-copper">{partialCount} PARTIAL</span>
-          <span className="text-status-alert">{rejectedCount} REJECTED</span>
+      {!loading && !error && toolsList.length > 0 && (
+        <div className="flex items-center justify-between p-3 rounded-lg bg-surface-card border border-border-hairline font-mono text-[11px] text-text-muted">
+          <span>{totalChecked} TOOLS CHECKED</span>
+          <div className="flex items-center gap-3">
+            <span className="text-status-success">{meetsCount} MEETS</span>
+            <span className="text-accent-copper">{partialCount} PARTIAL</span>
+            <span className="text-status-alert">{rejectedCount} REJECTED</span>
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Tool Verdict Cards */}
+      {/* Tool Verdict Cards or Error / Loading states */}
       {loading ? (
         <div className="py-16 flex flex-col items-center justify-center gap-3">
           <Loader2 className="w-6 h-6 text-accent-indigo animate-spin" />
           <p className="font-mono text-[12px] text-text-muted">Loading deterministic audit results...</p>
+        </div>
+      ) : error ? (
+        <div className="py-16 text-center rounded-xl bg-surface-card border border-border-hairline p-8 space-y-3">
+          <AlertCircle className="w-8 h-8 text-status-alert mx-auto" />
+          <p className="text-[15px] font-medium text-status-alert">{error}</p>
+          <p className="text-[13px] text-text-muted">Unable to retrieve verified tool evaluations.</p>
+          <div className="pt-2">
+            <Link
+              to="/query"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-accent-indigo text-white text-[12px] font-mono hover:bg-accent-indigo/90 transition-colors"
+            >
+              <span>Submit a new query</span>
+            </Link>
+          </div>
+        </div>
+      ) : toolsList.length === 0 ? (
+        <div className="py-16 text-center rounded-xl bg-surface-card border border-border-hairline p-8 space-y-3">
+          <p className="text-[15px] font-medium text-text-primary">No verification results</p>
+          <p className="text-[13px] text-text-muted">No tools matched the verification criteria for this query.</p>
+          <div className="pt-2">
+            <Link
+              to="/query"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-accent-indigo text-white text-[12px] font-mono hover:bg-accent-indigo/90 transition-colors"
+            >
+              <span>Try another query</span>
+            </Link>
+          </div>
         </div>
       ) : (
         <div className="pt-2 space-y-4">
@@ -205,13 +219,15 @@ export const QueryResult: React.FC = () => {
       )}
 
       {/* Deterministic pass footer */}
-      <div className="pt-6 border-t border-border-hairline flex items-center justify-between font-mono text-[10px] text-text-muted">
-        <span>INDEX AUDIT REVISION #4102</span>
-        <span className="flex items-center gap-1">
-          <span className="w-1.5 h-1.5 rounded-full bg-status-success"></span>
-          <span>VERIFIED DETERMINISTIC PASS</span>
-        </span>
-      </div>
+      {!loading && !error && toolsList.length > 0 && (
+        <div className="pt-6 border-t border-border-hairline flex items-center justify-between font-mono text-[10px] text-text-muted">
+          <span>INDEX AUDIT REVISION #4102</span>
+          <span className="flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-status-success"></span>
+            <span>VERIFIED DETERMINISTIC PASS</span>
+          </span>
+        </div>
+      )}
     </div>
   );
 };

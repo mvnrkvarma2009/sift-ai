@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Layout } from '../components/layout/Layout';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Sparkles, ArrowRight } from 'lucide-react';
+import { Sparkles, ArrowRight, AlertCircle } from 'lucide-react';
 import { Skeleton } from '../components/ui/Skeleton';
 import { queriesApi } from '../lib/api';
 
@@ -20,6 +20,7 @@ export const QueryPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const [query, setQuery] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const navigate = useNavigate();
 
@@ -46,19 +47,20 @@ export const QueryPage: React.FC = () => {
     if (!query.trim()) return;
 
     setIsVerifying(true);
+    setError(null);
     try {
       const res = await queriesApi.submitQuery(query.trim());
       if (res && res.id) {
         navigate(`/result/${res.id}?q=` + encodeURIComponent(query));
         return;
       }
+      throw new Error('Verification failed: No query ID returned');
     } catch (err: any) {
-      console.warn('[QUERY] API verification error, falling back to instant preview:', err.message);
+      console.error('[QUERY] API verification error:', err?.message || err);
+      setError(err?.response?.data?.error || err?.message || 'Verification service failed. Please check your connection and try again.');
+    } finally {
+      setIsVerifying(false);
     }
-    // Fallback preview
-    setTimeout(() => {
-      navigate('/result?q=' + encodeURIComponent(query));
-    }, 600);
   };
 
   const handleExampleClick = (example: string) => {
@@ -80,6 +82,13 @@ export const QueryPage: React.FC = () => {
             Describe what you need in natural language. Sift uses Gemini to extract structured constraint rules, then executes deterministic assertions against our verified tool ledger.
           </p>
         </div>
+
+        {error && (
+          <div className="p-4 rounded-xl bg-status-alert/10 border border-status-alert/20 text-status-alert text-[13px] flex items-center gap-2.5">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
 
         <form onSubmit={handleVerify} className="space-y-4">
           <div className="bg-surface-card border border-border-hairline rounded-xl p-4 focus-within:border-accent-indigo transition-colors shadow-xs">

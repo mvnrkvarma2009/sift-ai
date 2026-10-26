@@ -6,7 +6,7 @@ import { toolsApi } from '../../lib/api';
 import { useStaggerChildren } from '../../lib/mercuryMotion';
 
 export const StatsStrip: React.FC = () => {
-  const [toolsCount, setToolsCount] = useState<number>(1000);
+  const [toolsCount, setToolsCount] = useState<number>(0);
   const { child: statVariants } = useStaggerChildren(0.08);
 
   useEffect(() => {
@@ -18,7 +18,7 @@ export const StatsStrip: React.FC = () => {
         }
       })
       .catch(() => {
-        // Fallback already set to 1000
+        if (mounted) setToolsCount(0);
       });
     return () => {
       mounted = false;
@@ -32,7 +32,11 @@ export const StatsStrip: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12 md:gap-8 text-left md:text-center">
             <motion.div variants={statVariants} className="flex flex-col md:items-center">
               <span className="font-serif text-[56px] leading-[1.1] text-text-primary tracking-tight font-normal">
-                <AnimatedCounter value={toolsCount} suffix="+" />
+                {toolsCount > 0 ? (
+                  <AnimatedCounter value={toolsCount} suffix="+" />
+                ) : (
+                  <span>—</span>
+                )}
               </span>
               <span className="mt-3 font-mono text-[13px] uppercase text-text-muted tracking-[0.15em]">
                 TOOLS VERIFIED

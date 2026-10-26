@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Layout } from '../components/layout/Layout';
-import { Bookmark, Loader2, Layers, Wrench, Cpu, Newspaper } from 'lucide-react';
+import { Bookmark, Loader2, Layers, Wrench, Cpu, Newspaper, AlertCircle } from 'lucide-react';
 import { savedApi, SavedItem, timeAgo } from '../lib/api';
 import { ToolCard } from '../components/tools/ToolCard';
 import { ModelCard } from '../components/models/ModelCard';
@@ -15,38 +15,26 @@ export const SavedPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<SavedTab>(tabParam || 'tools');
   const [savedItems, setSavedItems] = useState<SavedItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchSaved = async () => {
     try {
       setLoading(true);
+      setError(null);
       const res = await savedApi.getSaved();
       const apiSaved = res.saved || [];
-      const local = JSON.parse(localStorage.getItem('sift_saved_items') || '[]');
-      const combined = [...apiSaved];
-      for (const loc of local) {
-        if (!combined.some((c) => c.item_type === loc.item_type && String(c.item_id) === String(loc.item_id))) {
-          combined.push(loc);
-        }
-      }
-      setSavedItems(combined);
+      setSavedItems(apiSaved);
       if (!tabParam) {
-        const toolsCount = combined.filter((s) => s.item_type === 'tool').length;
-        const modelsCount = combined.filter((s) => s.item_type === 'model').length;
+        const toolsCount = apiSaved.filter((s) => s.item_type === 'tool').length;
+        const modelsCount = apiSaved.filter((s) => s.item_type === 'model').length;
         if (toolsCount === 0 && modelsCount > 0) {
           setActiveTab('models');
         }
       }
-    } catch (err) {
-      console.warn('[SAVED] Failed to load saved items:', err);
-      const local = JSON.parse(localStorage.getItem('sift_saved_items') || '[]');
-      setSavedItems(local);
-      if (!tabParam) {
-        const toolsCount = local.filter((s: any) => s.item_type === 'tool').length;
-        const modelsCount = local.filter((s: any) => s.item_type === 'model').length;
-        if (toolsCount === 0 && modelsCount > 0) {
-          setActiveTab('models');
-        }
-      }
+    } catch (err: any) {
+      console.error('[SAVED] Failed to load saved items:', err);
+      setError('Failed to load saved items. Please try again.');
+      setSavedItems([]);
     } finally {
       setLoading(false);
     }
@@ -64,11 +52,8 @@ export const SavedPage: React.FC = () => {
     try {
       await savedApi.toggleSave('feed', id);
       setSavedItems((prev) => prev.filter((s) => !(s.item_type === 'feed' && s.item_id === id)));
-      const local = JSON.parse(localStorage.getItem('sift_saved_items') || '[]');
-      const updated = local.filter((item: any) => !(item.item_type === 'feed' && item.item_id === id));
-      localStorage.setItem('sift_saved_items', JSON.stringify(updated));
     } catch (err) {
-      console.error(err);
+      console.error('Failed to toggle feed bookmark:', err);
     }
   };
 
@@ -147,6 +132,18 @@ export const SavedPage: React.FC = () => {
           <div className="py-24 text-center flex flex-col items-center justify-center space-y-3">
             <Loader2 className="w-6 h-6 animate-spin text-accent-indigo" />
             <p className="text-[13px] font-mono text-text-muted">Loading saved items...</p>
+          </div>
+        ) : error ? (
+          <div className="py-20 text-center flex flex-col items-center justify-center space-y-3">
+            <AlertCircle className="w-8 h-8 text-status-alert mx-auto" />
+            <p className="text-[15px] font-medium text-status-alert">{error}</p>
+            <p className="text-[13px] text-text-muted">Unable to load your saved items.</p>
+            <button
+              onClick={() => fetchSaved()}
+              className="mt-2 px-3 py-1.5 rounded-lg bg-accent-indigo text-white text-[12px] font-mono hover:bg-accent-indigo/90 transition-colors cursor-pointer"
+            >
+              Retry
+            </button>
           </div>
         ) : activeTab === 'tools' ? (
           savedTools.length === 0 ? (

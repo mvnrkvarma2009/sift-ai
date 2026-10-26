@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Search, SlidersHorizontal, RefreshCw, CheckCircle2, Sparkles } from 'lucide-react';
+import { Search, SlidersHorizontal, RefreshCw, CheckCircle2, Sparkles, AlertCircle, Loader2 } from 'lucide-react';
 import { FeedItem, feedApi, adminApi, timeAgo, savedApi } from '../../lib/api';
 import { FeedCard } from './FeedCard';
 import { QueryInput } from './QueryInput';
@@ -9,6 +9,8 @@ export const FeedList: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'All' | 'AI' | 'Startups' | 'Tech' | 'Funding'>('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [items, setItems] = useState<FeedItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshToast, setRefreshToast] = useState<{ message: string; showRefreshLink?: boolean } | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
@@ -45,6 +47,8 @@ export const FeedList: React.FC = () => {
 
   const loadFeed = async (checkNew = false) => {
     try {
+      if (!checkNew && items.length === 0) setLoading(true);
+      setError(null);
       const data = await feedApi.getFeed();
       if (data && data.items) {
         if (checkNew && data.items.length > items.length && items.length > 0) {
@@ -68,8 +72,13 @@ export const FeedList: React.FC = () => {
         setLastUpdated(new Date());
         setMinAgo(0);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.warn('[FEED] Fetch notice:', err);
+      if (items.length === 0) {
+        setError('Failed to load intelligence feed. Please try again.');
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -219,7 +228,24 @@ export const FeedList: React.FC = () => {
 
       {/* Articles Feed */}
       <div className="mt-6 flex flex-col border-t border-border-hairline">
-        {filteredItems.length > 0 ? (
+        {loading && items.length === 0 ? (
+          <div className="py-20 flex flex-col items-center justify-center gap-3">
+            <Loader2 className="w-6 h-6 text-accent-indigo animate-spin" />
+            <p className="font-mono text-[12px] text-text-muted">Loading intelligence feed...</p>
+          </div>
+        ) : error && items.length === 0 ? (
+          <div className="py-20 text-center flex flex-col items-center justify-center space-y-3">
+            <AlertCircle className="w-8 h-8 text-status-alert mx-auto" />
+            <p className="text-[15px] font-medium text-status-alert">{error}</p>
+            <p className="text-[13px] text-text-muted">Unable to reach the feed service.</p>
+            <button
+              onClick={() => loadFeed()}
+              className="mt-2 px-3 py-1.5 rounded-lg bg-accent-indigo text-white text-[12px] font-mono hover:bg-accent-indigo/90 transition-colors cursor-pointer"
+            >
+              Retry
+            </button>
+          </div>
+        ) : filteredItems.length > 0 ? (
           filteredItems.map((item) => (
             <FeedCard
               key={item.id}

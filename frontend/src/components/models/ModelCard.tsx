@@ -54,45 +54,8 @@ export const ModelCard: React.FC<ModelCardProps> = ({
       setSaving(true);
       const res = await savedApi.toggleSave('model', model.id);
       setIsSaved(res.saved);
-      const local = JSON.parse(localStorage.getItem('sift_saved_items') || '[]');
-      if (res.saved) {
-        if (!local.some((item: any) => item.item_type === 'model' && item.item_id === model.id)) {
-          local.unshift({
-            id: `saved_m_${Date.now()}`,
-            user_id: 'builder',
-            item_type: 'model',
-            item_id: model.id,
-            created_at: new Date().toISOString(),
-            item: model,
-          });
-        }
-      } else {
-        const filtered = local.filter((item: any) => !(item.item_type === 'model' && item.item_id === model.id));
-        localStorage.setItem('sift_saved_items', JSON.stringify(filtered));
-        return;
-      }
-      localStorage.setItem('sift_saved_items', JSON.stringify(local));
     } catch (err) {
-      console.error('Failed to toggle save:', err);
-      // Fallback local toggle
-      const local = JSON.parse(localStorage.getItem('sift_saved_items') || '[]');
-      const exists = local.some((item: any) => item.item_type === 'model' && item.item_id === model.id);
-      if (exists) {
-        const filtered = local.filter((item: any) => !(item.item_type === 'model' && item.item_id === model.id));
-        localStorage.setItem('sift_saved_items', JSON.stringify(filtered));
-        setIsSaved(false);
-      } else {
-        local.unshift({
-          id: `saved_m_${Date.now()}`,
-          user_id: 'builder',
-          item_type: 'model',
-          item_id: model.id,
-          created_at: new Date().toISOString(),
-          item: model,
-        });
-        localStorage.setItem('sift_saved_items', JSON.stringify(local));
-        setIsSaved(true);
-      }
+      console.error('Failed to toggle save model:', err);
     } finally {
       setSaving(false);
     }
