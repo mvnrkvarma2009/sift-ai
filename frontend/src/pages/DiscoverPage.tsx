@@ -47,15 +47,15 @@ export const DiscoverPage: React.FC = () => {
       ],
     },
     {
-      title: 'New This Week',
+      title: 'New Frontier Models',
       icon: Sparkles,
-      tag: 'FRESH INTELLIGENCE',
-      description: 'Recent frontier releases and breakthrough capabilities verified on Sift.',
+      tag: 'LATEST BENCHMARKS',
+      description: 'Recent frontier releases and breakthrough reasoning capabilities verified on Sift.',
       tools: [
-        { name: 'Windsurf', category: 'Coding', pricing: 'Free Tier', badge: '87% Trending', detail: 'Agentic Cascade flows with speculative file editing.' },
-        { name: 'Flux', category: 'Image', pricing: 'Free Tier', badge: 'Apache 2.0', detail: 'Next-generation open weights text-to-image with crisp typography.' },
-        { name: 'Sora', category: 'Video', pricing: 'Waitlist', badge: 'World Sim', detail: 'Spatiotemporal video synthesis with consistent physics.' },
-        { name: 'Mistral Le Chat', category: 'Chatting', pricing: 'Free Tier', badge: 'Open Frontier', detail: 'Free access to Mistral Large, Pixtral, and Codestral.' },
+        { name: 'Gemini Argon-4', category: 'Reasoning', pricing: 'Closed Source', badge: '100% Trending', detail: 'Google DeepMind 2M context multi-hop reasoning & autonomous agentic synthesis.' },
+        { name: 'Fable-5', category: 'Multimodal', pricing: 'Closed Source', badge: '99% Trending', detail: 'Frontier narrative reasoning, interactive world generation & code simulation.' },
+        { name: 'Claude 3.7 Sonnet', category: 'Coding', pricing: 'Closed Source', badge: '99% Trending', detail: 'Hybrid instant streaming + reasoning with native test assertions.' },
+        { name: 'DeepSeek R1', category: 'Reasoning', pricing: 'Open Weights', badge: 'MIT License', detail: 'Open reasoning model delivering benchmark parity with state-of-the-art closed models.' },
       ],
     },
     {
