@@ -119,8 +119,15 @@ export const ModelDetailPage: React.FC = () => {
               </p>
             </div>
 
-            {/* Type badge + External docs button */}
-            <div className="flex items-center gap-2 shrink-0">
+            {/* Type badge + Paid/Free Badge + External docs button */}
+            <div className="flex items-center gap-2 shrink-0 flex-wrap">
+              <span className={`font-mono text-[11px] uppercase font-semibold px-2.5 py-1 rounded-full border ${
+                isOpenSource || (model.pricing && model.pricing.toLowerCase().includes('free'))
+                  ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
+                  : 'text-purple-400 bg-purple-500/10 border-purple-500/20'
+              }`}>
+                {isOpenSource || (model.pricing && model.pricing.toLowerCase().includes('free')) ? '100% FREE WEIGHTS' : 'PAID API'}
+              </span>
               <span className="font-mono text-[11px] uppercase px-3 py-1 rounded-full border border-border-hairline bg-surface-elevated text-text-secondary">
                 {capitalize(model.type || 'Chat')}
               </span>
@@ -236,6 +243,12 @@ export const ModelDetailPage: React.FC = () => {
             </h3>
 
             <div className="space-y-3 font-mono text-[12px]">
+              <div className="flex items-center justify-between py-1 border-b border-border-hairline/60">
+                <span className="text-text-muted uppercase">Pricing Tier</span>
+                <span className={`font-semibold ${isOpenSource || (model.pricing && model.pricing.toLowerCase().includes('free')) ? 'text-emerald-400' : 'text-purple-400'}`}>
+                  {isOpenSource ? '100% Free / Open Weights' : model.pricing || (model.price_monthly ? `$${model.price_monthly}/mo` : 'Paid API')}
+                </span>
+              </div>
               <div className="flex items-center justify-between py-1 border-b border-border-hairline/60">
                 <span className="text-text-muted uppercase">License</span>
                 <span className="text-text-primary font-medium text-emerald-400">{model.license || (isOpenSource ? 'Apache 2.0' : 'Proprietary')}</span>

@@ -7,9 +7,9 @@ import { ModelCard } from '../components/models/ModelCard';
 
 // Type filter tabs (Section C)
 const TYPE_TABS = [
-  { id: 'all', label: 'All' },
-  { id: 'closed_source', label: 'Closed Source' },
-  { id: 'open_source', label: 'Open Source' },
+  { id: 'all', label: 'All Models' },
+  { id: 'closed_source', label: 'Paid / API Only' },
+  { id: 'open_source', label: '100% Free Weights' },
 ];
 
 // Category pills (Section C)
@@ -120,48 +120,48 @@ export const ModelsPage: React.FC = () => {
             The complete model landscape.
           </h1>
           <p className="text-[16px] text-text-muted">
-            Every major AI model. Open source to closed source. {total > 0 ? `${total.toLocaleString()} models indexed.` : '500+ models indexed.'}
+            Every major AI model. 100% Free Open Weights to Paid Commercial APIs. {total > 0 ? `${total.toLocaleString()} models indexed.` : '500+ models indexed.'}
           </p>
         </div>
 
         {/* SECTION B — Explanation cards (two columns, hairline borders, 24px padding) */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* LEFT CARD (closed source) */}
-          <div className="p-6 rounded-2xl bg-surface-card border border-border-hairline flex flex-col justify-between space-y-4 hover:border-amber-500/30 transition-colors">
+          <div className="p-6 rounded-2xl bg-surface-card border border-border-hairline flex flex-col justify-between space-y-4 hover:border-purple-500/30 transition-colors">
             <div className="space-y-2">
-              <span className="font-mono text-[11px] uppercase tracking-wider text-amber-400 font-semibold block">
-                CLOSED SOURCE
+              <span className="font-mono text-[11px] uppercase tracking-wider text-purple-400 font-semibold block">
+                PAID API · CLOSED SOURCE
               </span>
               <h2 className="text-[20px] font-medium text-text-primary font-sans">
                 Pay per use. No download.
               </h2>
               <p className="text-[14px] text-text-muted leading-relaxed">
-                OpenAI, Anthropic, Google. You pay monthly or per token. No hardware needed.
+                OpenAI, Anthropic, Google, xAI. You pay monthly subscriptions or metered token usage. Zero local hardware required.
               </p>
             </div>
             <div className="pt-3 border-t border-border-hairline/60">
-              <p className="text-[13px] font-mono text-amber-400/90 font-medium">
-                Best for: apps without servers
+              <p className="text-[13px] font-mono text-purple-400/90 font-medium">
+                Best for: instant production apps without GPU clusters
               </p>
             </div>
           </div>
 
           {/* RIGHT CARD (open source) */}
-          <div className="p-6 rounded-2xl bg-surface-card border border-border-hairline flex flex-col justify-between space-y-4 hover:border-teal-500/30 transition-colors">
+          <div className="p-6 rounded-2xl bg-surface-card border border-border-hairline flex flex-col justify-between space-y-4 hover:border-emerald-500/30 transition-colors">
             <div className="space-y-2">
-              <span className="font-mono text-[11px] uppercase tracking-wider text-teal-400 font-semibold block">
-                OPEN SOURCE
+              <span className="font-mono text-[11px] uppercase tracking-wider text-emerald-400 font-semibold block">
+                100% FREE WEIGHTS · OPEN SOURCE
               </span>
               <h2 className="text-[20px] font-medium text-text-primary font-sans">
                 Download and run it yourself.
               </h2>
               <p className="text-[14px] text-text-muted leading-relaxed">
-                Meta, Alibaba, DeepSeek. Free weights. You provide the GPU. Full control.
+                Meta Llama, DeepSeek, Qwen, Mistral. Permissive free weights. You provide local GPU/hardware. Full data privacy.
               </p>
             </div>
             <div className="pt-3 border-t border-border-hairline/60">
-              <p className="text-[13px] font-mono text-teal-400/90 font-medium">
-                Best for: privacy and control
+              <p className="text-[13px] font-mono text-emerald-400/90 font-medium">
+                Best for: complete privacy, local execution, and zero SaaS fees
               </p>
             </div>
           </div>
@@ -187,7 +187,7 @@ export const ModelsPage: React.FC = () => {
           <div className="p-4 rounded-xl bg-surface-card border border-border-hairline space-y-4">
             {/* Type tabs + Search */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-              {/* Type tabs: All · Closed Source · Open Source */}
+              {/* Type tabs: All Models · Paid / API Only · 100% Free Weights */}
               <div className="flex items-center gap-1.5 p-1 rounded-lg bg-surface-elevated border border-border-hairline w-fit">
                 {TYPE_TABS.map((tab) => {
                   const active = selectedType === tab.id;

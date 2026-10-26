@@ -87,8 +87,14 @@ export const RightPanelWidgets: React.FC = () => {
                   <p className="text-[13px] font-medium text-text-primary group-hover:text-accent-indigo transition-colors truncate">
                     {m.name}
                   </p>
-                  <span className="text-[11px] font-mono text-text-muted font-medium shrink-0">
-                    {m.type === 'closed_source' ? 'API' : 'Weights'}
+                  <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded border uppercase font-semibold shrink-0 ${
+                    m.source_type === 'open_source' || m.type === 'open_source' || (m.pricing && m.pricing.toLowerCase().includes('free'))
+                      ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
+                      : 'text-purple-400 bg-purple-500/10 border-purple-500/20'
+                  }`}>
+                    {m.source_type === 'open_source' || m.type === 'open_source' || (m.pricing && m.pricing.toLowerCase().includes('free'))
+                      ? 'FREE'
+                      : 'PAID'}
                   </span>
                 </div>
                 <p className="text-[11px] text-text-muted mt-0.5">{m.provider}</p>

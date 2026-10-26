@@ -252,17 +252,28 @@ export const ModelsComparePage: React.FC = () => {
                           </span>
                         </td>
 
-                        {/* 2. Type — "Closed Source" or "Open Source" */}
+                        {/* 2. Type — "Closed Source" or "Open Source" with PAID / FREE badge */}
                         <td className="p-4 align-top">
-                          <span
-                            className={`inline-block px-2.5 py-0.5 rounded text-[11px] font-mono font-medium ${
-                              isOS
-                                ? 'text-teal-400 bg-teal-500/10 border border-teal-500/20'
-                                : 'text-amber-400 bg-amber-500/10 border border-amber-500/20'
-                            }`}
-                          >
-                            {isOS ? 'Open Source' : 'Closed Source'}
-                          </span>
+                          <div className="flex flex-col gap-1.5 items-start">
+                            <span
+                              className={`inline-block px-2.5 py-0.5 rounded text-[11px] font-mono font-medium ${
+                                isOS
+                                  ? 'text-teal-400 bg-teal-500/10 border border-teal-500/20'
+                                  : 'text-amber-400 bg-amber-500/10 border border-amber-500/20'
+                              }`}
+                            >
+                              {isOS ? 'Open Source' : 'Closed Source'}
+                            </span>
+                            <span
+                              className={`inline-block px-2 py-0.5 rounded text-[10px] font-mono font-semibold uppercase ${
+                                isOS || (m.pricing && m.pricing.toLowerCase().includes('free'))
+                                  ? 'text-emerald-400 bg-emerald-500/10 border border-emerald-500/20'
+                                  : 'text-purple-400 bg-purple-500/10 border border-purple-500/20'
+                              }`}
+                            >
+                              {isOS || (m.pricing && m.pricing.toLowerCase().includes('free')) ? '100% FREE' : 'PAID API'}
+                            </span>
+                          </div>
                         </td>
 
                         {/* 3. Provider — company */}
@@ -315,15 +326,15 @@ export const ModelsComparePage: React.FC = () => {
                         </td>
 
                         {/* 6. Price or Hardware */}
-                        <td className="p-4 align-top font-mono text-[13px] text-text-secondary">
+                        <td className="p-4 align-top font-mono text-[13px]">
                           <span
                             className={
                               !isOS
-                                ? 'text-text-primary font-medium'
-                                : 'text-[#C48458] font-medium'
+                                ? 'text-purple-400 font-medium'
+                                : 'text-emerald-400 font-medium'
                             }
                           >
-                            {getPriceOrHardware(m)}
+                            {isOS ? `Free (${getPriceOrHardware(m)})` : getPriceOrHardware(m)}
                           </span>
                         </td>
 

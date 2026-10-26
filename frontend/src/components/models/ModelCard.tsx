@@ -48,6 +48,35 @@ export const ModelCard: React.FC<ModelCardProps> = ({
   const isOpenSource = model.source_type === 'open_source' || model.type === 'open_source';
   const isClosedSource = !isOpenSource;
 
+  // Determine clear PAID / FREE / FREE TIER badge
+  const getPricingBadge = (): { label: string; badgeColor: string } => {
+    const p = (model.pricing || '').toLowerCase();
+    if (isOpenSource || p.includes('free') || p.includes('open weights') || p === 'free_local') {
+      if (p.includes('tier')) {
+        return {
+          label: 'FREE TIER',
+          badgeColor: 'text-sky-400 bg-sky-500/10 border-sky-500/20',
+        };
+      }
+      return {
+        label: 'FREE',
+        badgeColor: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
+      };
+    }
+    if (p === 'free_tier' || p.includes('free tier')) {
+      return {
+        label: 'FREE TIER',
+        badgeColor: 'text-sky-400 bg-sky-500/10 border-sky-500/20',
+      };
+    }
+    return {
+      label: 'PAID',
+      badgeColor: 'text-purple-400 bg-purple-500/10 border-purple-500/20',
+    };
+  };
+
+  const pricingBadge = getPricingBadge();
+
   const handleToggleSave = async (e: React.MouseEvent) => {
     e.stopPropagation();
     try {
@@ -74,6 +103,9 @@ export const ModelCard: React.FC<ModelCardProps> = ({
     }
     if (model.pricing === 'paid_only') {
       return 'Pay per token';
+    }
+    if (model.pricing && (model.pricing.includes('$') || model.pricing.includes('/M'))) {
+      return model.pricing;
     }
     return 'API access';
   };
@@ -139,6 +171,11 @@ export const ModelCard: React.FC<ModelCardProps> = ({
                 OPEN
               </span>
             )}
+
+            {/* Explicit PAID / FREE / FREE TIER badge */}
+            <span className={`px-2 py-0.5 rounded text-[10px] font-mono uppercase font-semibold border ${pricingBadge.badgeColor}`}>
+              {pricingBadge.label}
+            </span>
 
             {isNew && (
               <span className="px-1.5 py-0.5 rounded text-[9px] font-mono uppercase font-semibold text-accent-indigo bg-accent-indigo/[0.08] border border-accent-indigo/20">
@@ -243,8 +280,10 @@ export const ModelCard: React.FC<ModelCardProps> = ({
         {isClosedSource ? (
           <div>
             <div className="flex items-center justify-between">
-              <span className="font-mono text-[10px] uppercase tracking-wider text-text-muted">
-                ACCESS
+              <span className={`font-mono text-[10px] uppercase tracking-wider font-medium ${
+                pricingBadge.label === 'FREE TIER' ? 'text-sky-400' : 'text-purple-400'
+              }`}>
+                {pricingBadge.label === 'FREE TIER' ? 'FREE TIER AVAILABLE' : 'PAID API ACCESS'}
               </span>
               {(model.docs_url || model.documentation_url) && (
                 <a
@@ -259,15 +298,17 @@ export const ModelCard: React.FC<ModelCardProps> = ({
               )}
             </div>
             <div className="flex items-baseline justify-between gap-1 mt-0.5">
-              <span className="text-[13px] font-medium text-text-primary">API only</span>
+              <span className="text-[13px] font-medium text-text-primary">
+                {pricingBadge.label === 'FREE TIER' ? 'Free Tier' : 'Paid Usage'}
+              </span>
               <span className="text-[13px] text-text-muted">{getPricingDisplay()}</span>
             </div>
           </div>
         ) : (
           <div>
             <div className="flex items-center justify-between">
-              <span className="font-mono text-[10px] uppercase tracking-wider text-text-muted">
-                REQUIRED SKILLS
+              <span className="font-mono text-[10px] uppercase tracking-wider text-emerald-400 font-medium">
+                100% FREE WEIGHTS
               </span>
               {(model.hf_url || model.documentation_url) && (
                 <a

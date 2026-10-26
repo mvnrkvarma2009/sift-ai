@@ -52,11 +52,12 @@ export const DiscoverPage: React.FC = () => {
       tag: 'LATEST BENCHMARKS',
       description: 'Recent frontier releases and breakthrough reasoning capabilities verified on Sift.',
       tools: [
-        { name: 'Claude Opus 5.5', category: 'Reasoning', pricing: 'Closed Source', badge: '100% Trending', detail: 'Anthropic 1M token flagship for autonomous architectural engineering & deep mathematics.' },
-        { name: 'Claude Sonnet 5.5', category: 'Coding', pricing: 'Closed Source', badge: '100% Trending', detail: 'Ultra-fast agentic codegen, deterministic test assertions & full-stack workflows.' },
-        { name: 'Fable-5.1', category: 'Multimodal', pricing: 'Closed Source', badge: '100% Trending', detail: 'Self-healing code simulation, interactive world generation & persistent 1M context.' },
-        { name: 'Gemini Argon-4', category: 'Reasoning', pricing: 'Closed Source', badge: '100% Trending', detail: 'Google DeepMind 2M context multi-hop reasoning & autonomous agentic synthesis.' },
-        { name: 'Grok 4', category: 'Reasoning', pricing: 'Closed Source', badge: '100% Trending', detail: 'xAI real-time internet truth seeking, advanced scientific computation & uncensored reasoning.' },
+        { name: 'Claude Opus 5.5', category: 'Reasoning', pricing: 'Paid', badge: '100% Trending', detail: 'Anthropic 1M token flagship for autonomous architectural engineering & deep mathematics.' },
+        { name: 'Claude Sonnet 5.5', category: 'Coding', pricing: 'Paid / Free Tier', badge: '100% Trending', detail: 'Ultra-fast agentic codegen, deterministic test assertions & full-stack workflows.' },
+        { name: 'Fable-5.1', category: 'Multimodal', pricing: 'Paid', badge: '100% Trending', detail: 'Self-healing code simulation, interactive world generation & persistent 1M context.' },
+        { name: 'Gemini Argon-4', category: 'Reasoning', pricing: 'Free Tier / Paid', badge: '100% Trending', detail: 'Google DeepMind 2M context multi-hop reasoning & autonomous agentic synthesis.' },
+        { name: 'Grok 4', category: 'Reasoning', pricing: 'Paid', badge: '100% Trending', detail: 'xAI real-time internet truth seeking, advanced scientific computation & uncensored reasoning.' },
+        { name: 'DeepSeek R1', category: 'Reasoning', pricing: 'Free', badge: 'Open Weights', detail: 'State-of-the-art open reasoning model matching frontier performance with full weight access.' },
       ],
     },
     {
@@ -73,6 +74,17 @@ export const DiscoverPage: React.FC = () => {
     },
   ];
 
+  const getPricingBadgeClass = (pricing: string) => {
+    const p = pricing.toLowerCase();
+    if (p === 'free' || p.includes('zero-cost') || p.includes('open weights')) {
+      return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
+    }
+    if (p.includes('tier') || p.includes('freemium')) {
+      return 'bg-sky-500/10 text-sky-400 border-sky-500/20';
+    }
+    return 'bg-purple-500/10 text-purple-400 border-purple-500/20';
+  };
+
   return (
     <Layout showSidebar>
       <div className="p-6 lg:p-10 max-w-6xl mx-auto w-full space-y-10">
@@ -84,7 +96,7 @@ export const DiscoverPage: React.FC = () => {
             Discover Verified Collections
           </h1>
           <p className="text-[14px] text-text-secondary mt-1">
-            Curated clusters of tools verified against strict functional criteria, pricing tiers, and benchmarked rules.
+            Curated clusters of tools and frontier models verified with strict Free vs Paid pricing tiers and benchmarked capabilities.
           </p>
         </div>
 
@@ -113,7 +125,7 @@ export const DiscoverPage: React.FC = () => {
                   </Link>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                   {col.tools.map((tool, tIdx) => (
                     <div
                       key={tIdx}
@@ -124,7 +136,7 @@ export const DiscoverPage: React.FC = () => {
                           <h3 className="text-[16px] font-medium text-text-primary group-hover:text-accent-indigo transition-colors">
                             {tool.name}
                           </h3>
-                          <span className="font-mono text-[9px] uppercase px-1.5 py-0.5 rounded border border-border-hairline bg-surface-elevated text-text-muted">
+                          <span className={`font-mono text-[9px] uppercase px-2 py-0.5 rounded border tracking-wide font-semibold shrink-0 ${getPricingBadgeClass(tool.pricing)}`}>
                             {tool.pricing}
                           </span>
                         </div>
