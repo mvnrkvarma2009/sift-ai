@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { SiftLogo } from '../components/brand/SiftLogo';
 import { useAuth } from '../hooks/useAuth';
 import { ThemeToggle } from '../components/brand/ThemeToggle';
-import { ArrowRight, AlertCircle, Sparkles } from 'lucide-react';
+import { ArrowRight, AlertCircle } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -22,25 +22,9 @@ export const LoginPage: React.FC = () => {
     } catch (err: any) {
       console.error('[AUTH] Google sign-in error:', err);
       setError(
-        err?.message ||
-          'Google OAuth not configured yet in Supabase Dashboard. Please use demo credentials or Continue as Guest.'
+        err?.message || 'Failed to initialize Google login. Please check your credentials or network.'
       );
       setGoogleLoading(false);
-    }
-  };
-
-  const handleDemoSignIn = async () => {
-    setError('');
-    setEmail('demo@sift.ai');
-    setPassword('demo1234');
-    setLoading(true);
-    try {
-      await login('demo@sift.ai', 'demo1234');
-      navigate('/dashboard');
-    } catch (err: any) {
-      setError(err?.message || 'Failed to sign in with demo credentials.');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -68,7 +52,7 @@ export const LoginPage: React.FC = () => {
       await login(email, password);
       navigate('/dashboard');
     } catch (err: any) {
-      setError(err?.message || 'Failed to sign in. Please verify your credentials.');
+      setError(err?.message || 'Failed to sign in. Please verify your email and password.');
     } finally {
       setLoading(false);
     }
@@ -105,7 +89,7 @@ export const LoginPage: React.FC = () => {
             </div>
           )}
 
-          {/* Google Sign-in */}
+          {/* Continue with Google */}
           <button
             type="button"
             onClick={handleGoogleSignIn}
@@ -142,6 +126,7 @@ export const LoginPage: React.FC = () => {
             </div>
           </div>
 
+          {/* Manual Email & Password Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block font-mono text-[11px] uppercase tracking-wider text-text-muted mb-2">
@@ -181,28 +166,17 @@ export const LoginPage: React.FC = () => {
               disabled={loading || googleLoading}
               className="w-full mt-6 h-11 bg-accent-indigo text-white text-[14px] font-medium rounded-lg hover:bg-accent-indigo/90 transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-sm disabled:opacity-50"
             >
-              <span>{loading ? 'Authenticating...' : 'Sign in with Email'}</span>
+              <span>{loading ? 'Authenticating...' : 'Sign in'}</span>
               <ArrowRight className="w-4 h-4" />
-            </button>
-
-            {/* Instant Demo Sign-in */}
-            <button
-              type="button"
-              onClick={handleDemoSignIn}
-              disabled={loading || googleLoading}
-              className="w-full mt-2 py-2.5 px-3 bg-surface-elevated hover:bg-surface-elevated/80 border border-border-hairline rounded-lg text-[13px] font-medium text-accent-indigo flex items-center justify-center gap-2 transition-colors cursor-pointer"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-accent-indigo" />
-              <span>Instant Demo Access (demo@sift.ai)</span>
             </button>
 
             {/* Continue as Guest */}
             <button
               type="button"
               onClick={handleGuestAccess}
-              className="w-full py-2 text-[12px] text-text-muted hover:text-text-primary flex items-center justify-center gap-1.5 transition-colors"
+              className="w-full py-2.5 text-[12px] text-text-muted hover:text-text-primary flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
             >
-              <span>Continue as Guest (No account needed) →</span>
+              <span>Continue as Guest (Explore without account) →</span>
             </button>
           </form>
 

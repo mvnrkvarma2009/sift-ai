@@ -55,7 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     supabase.auth.signOut().catch(() => {});
   };
 
-  // Sync Supabase Auth session (for Google OAuth redirects)
+  // Sync Supabase Auth session (for Google OAuth redirects and active sessions)
   useEffect(() => {
     supabase.auth
       .getSession()
@@ -113,7 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Validate session against API if token exists
+  // Validate session against API if token exists and user not yet populated
   useEffect(() => {
     if (token && !user) {
       authApi
@@ -147,9 +147,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(guestUser);
   };
 
+  // Manual Email & Password login: Supports Supabase Auth directly + backend API
   const login = async (email: string, password?: string): Promise<boolean> => {
+    const pwd = password || 'Password123!';
+
+    // 1. Direct Supabase Auth login
+    const { data: supaData, error: supaError } = await supabase.auth.signInWithPassword({
+      email,
+      password: pwd,
+    });
+
+    if (!supaError && supaData?.session) {
+      const supaUser: User = {
+        id: supaData.session.user.id,
+        email: supaData.session.user.email || email,
+        name:
+          supaData.session.user.user_metadata?.full_name ||
+          supaData.session.user.user_metadata?.name ||
+          email.split('@')[0],
+        avatar: supaData.session.user.user_metadata?.avatar_url,
+      };
+      localStorage.setItem('sift_jwt', supaData.session.access_token);
+      localStorage.setItem('sift_user', JSON.stringify(supaUser));
+      setToken(supaData.session.access_token);
+      setUser(supaUser);
+      return true;
+    }
+
+    // 2. Also try custom backend API if available
     try {
-      const res = await authApi.login(email, password || 'Password123!');
+      const res = await authApi.login(email, pwd);
       if (res && res.token) {
         localStorage.setItem('sift_jwt', res.token);
         localStorage.setItem('sift_user', JSON.stringify(res.user));
@@ -157,35 +184,61 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(res.user || null);
         return true;
       }
-      throw new Error('Authentication failed: No token returned');
-    } catch (err: any) {
-      // If the backend returns 404 or connection error (e.g. backend host offline),
-      // allow demo and test credentials to seamlessly authenticate so the user is never stuck
-      const isDemo =
-        email.toLowerCase().includes('demo') ||
-        email.toLowerCase() === 'admin@sift.ai' ||
-        email.toLowerCase().endsWith('@sift.ai');
-
-      if (isDemo || err?.message?.includes('404') || err?.message?.includes('Network Error')) {
-        const fallbackUser: User = {
-          id: 'b5f20b41-2504-4a47-9a16-c626aab39d1d',
-          name: isDemo ? 'Demo User' : email.split('@')[0],
-          email: email,
-        };
-        const fallbackToken = 'sift_demo_session_token';
-        localStorage.setItem('sift_jwt', fallbackToken);
-        localStorage.setItem('sift_user', JSON.stringify(fallbackUser));
-        setToken(fallbackToken);
-        setUser(fallbackUser);
-        return true;
-      }
-      throw err;
+    } catch {
+      // Backend is optional when Supabase is primary
     }
+
+    // 3. Fallback for demo credentials
+    if (email.toLowerCase().includes('demo') || email.toLowerCase() === 'builder@sift.dev') {
+      const demoUser: User = {
+        id: 'b5f20b41-2504-4a47-9a16-c626aab39d1d',
+        name: 'Demo User',
+        email: email,
+      };
+      const demoToken = 'sift_demo_session_token';
+      localStorage.setItem('sift_jwt', demoToken);
+      localStorage.setItem('sift_user', JSON.stringify(demoUser));
+      setToken(demoToken);
+      setUser(demoUser);
+      return true;
+    }
+
+    if (supaError) {
+      throw new Error(supaError.message || 'Invalid email or password.');
+    }
+    throw new Error('Invalid email or password. Please verify your credentials.');
   };
 
+  // Manual Email & Password registration
   const register = async (name: string, email: string, password?: string): Promise<boolean> => {
+    const pwd = password || 'Password123!';
+
+    // 1. Direct Supabase Auth registration
+    const { data: supaData, error: supaError } = await supabase.auth.signUp({
+      email,
+      password: pwd,
+      options: {
+        data: { name, full_name: name },
+      },
+    });
+
+    if (!supaError && supaData?.user) {
+      const supaUser: User = {
+        id: supaData.user.id,
+        email: supaData.user.email || email,
+        name: name,
+      };
+      const authToken = supaData.session?.access_token || 'sift_session_' + supaData.user.id;
+      localStorage.setItem('sift_jwt', authToken);
+      localStorage.setItem('sift_user', JSON.stringify(supaUser));
+      setToken(authToken);
+      setUser(supaUser);
+      return true;
+    }
+
+    // 2. Fallback to API registration
     try {
-      const res = await authApi.register(name, email, password || 'Password123!');
+      const res = await authApi.register(name, email, pwd);
       if (res && res.token) {
         localStorage.setItem('sift_jwt', res.token);
         localStorage.setItem('sift_user', JSON.stringify(res.user));
@@ -193,23 +246,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(res.user || null);
         return true;
       }
-      throw new Error('Registration failed: No token returned');
-    } catch (err: any) {
-      if (err?.message?.includes('404') || err?.message?.includes('Network Error')) {
-        const newUser: User = {
-          id: 'b5f20b41-2504-4a47-9a16-c626aab39d1d',
-          name: name,
-          email: email,
-        };
-        const fallbackToken = 'sift_registered_session_token';
-        localStorage.setItem('sift_jwt', fallbackToken);
-        localStorage.setItem('sift_user', JSON.stringify(newUser));
-        setToken(fallbackToken);
-        setUser(newUser);
-        return true;
-      }
-      throw err;
+    } catch {
+      // ignore
     }
+
+    if (supaError) {
+      throw new Error(supaError.message || 'Registration failed.');
+    }
+    throw new Error('Registration failed.');
   };
 
   return (
