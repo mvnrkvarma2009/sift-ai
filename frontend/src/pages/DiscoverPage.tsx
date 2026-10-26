@@ -52,10 +52,11 @@ export const DiscoverPage: React.FC = () => {
       tag: 'LATEST BENCHMARKS',
       description: 'Recent frontier releases and breakthrough reasoning capabilities verified on Sift.',
       tools: [
+        { name: 'Claude Opus 5.5', category: 'Reasoning', pricing: 'Closed Source', badge: '100% Trending', detail: 'Anthropic 1M token flagship for autonomous architectural engineering & deep mathematics.' },
+        { name: 'Claude Sonnet 5.5', category: 'Coding', pricing: 'Closed Source', badge: '100% Trending', detail: 'Ultra-fast agentic codegen, deterministic test assertions & full-stack workflows.' },
+        { name: 'Fable-5.1', category: 'Multimodal', pricing: 'Closed Source', badge: '100% Trending', detail: 'Self-healing code simulation, interactive world generation & persistent 1M context.' },
         { name: 'Gemini Argon-4', category: 'Reasoning', pricing: 'Closed Source', badge: '100% Trending', detail: 'Google DeepMind 2M context multi-hop reasoning & autonomous agentic synthesis.' },
-        { name: 'Fable-5', category: 'Multimodal', pricing: 'Closed Source', badge: '99% Trending', detail: 'Frontier narrative reasoning, interactive world generation & code simulation.' },
-        { name: 'Claude 3.7 Sonnet', category: 'Coding', pricing: 'Closed Source', badge: '99% Trending', detail: 'Hybrid instant streaming + reasoning with native test assertions.' },
-        { name: 'DeepSeek R1', category: 'Reasoning', pricing: 'Open Weights', badge: 'MIT License', detail: 'Open reasoning model delivering benchmark parity with state-of-the-art closed models.' },
+        { name: 'Grok 4', category: 'Reasoning', pricing: 'Closed Source', badge: '100% Trending', detail: 'xAI real-time internet truth seeking, advanced scientific computation & uncensored reasoning.' },
       ],
     },
     {
